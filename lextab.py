@@ -1,0 +1,9 @@
+# lextab.py. This file automatically created by PLY (version 3.4). Don't edit!
+_tabversion   = '3.4'
+_lextokens    = {'THEN': 1, 'ATE': 1, 'UNSURE': 1, 'LETTER': 1, 'PERHAPS': 1, 'EQUAL': 1, 'LESS_EQUAL': 1, 'DRANK': 1, 'LOGICAL_AND': 1, 'TOO': 1, 'LESS_THAN': 1, 'SPOKE': 1, 'WHAT': 1, 'NOT_EQUAL': 1, 'ROOM': 1, 'GREATER_EQUAL': 1, 'GLASS': 1, 'BUT': 1, 'A': 1, 'EVENTUALLY': 1, 'SENTENCE': 1, 'NUMBER': 1, 'MAYBE': 1, 'PIECE': 1, 'HAD': 1, 'ALICE': 1, 'SPIDER': 1, 'LOOKING': 1, 'S': 1, 'SAID': 1, 'WHICH': 1, 'GREATER_THAN': 1, 'FOUND': 1, 'THE': 1, 'TIMES': 1, 'WAS': 1, 'ID': 1, 'OPENED': 1, 'AND': 1, 'BECAUSE': 1, 'LOGICAL_NOT': 1, 'STRING_LITERAL': 1, 'OF': 1, 'CHAR_LITERAL': 1, 'CONTAINED': 1, 'LOGICAL_OR': 1, 'ENOUGH': 1, 'BECAME': 1, 'SO': 1, 'EITHER': 1, 'CLOSED': 1, 'INT_LITERAL': 1, 'APOSTROPHE': 1, 'OR': 1}
+_lexreflags   = 2
+_lexliterals  = ".,*%+-/()?|&^~{}'"
+_lexstateinfo = {'INITIAL': 'inclusive'}
+_lexstatere   = {'INITIAL': [('(?P<t_ID>[a-zA-z][a-zA-Z0-9_]*)|(?P<t_INT_LITERAL>\\d+)|(?P<t_CHAR_LITERAL>\\\'.\\\')|(?P<t_STRING_LITERAL>\\".*\\")|(?P<t_COMMENT>\\#.*\\n)|(?P<t_newline>\\n+)|(?P<t_LOGICAL_OR>\\|\\|)|(?P<t_EQUAL>==)|(?P<t_GREATER_EQUAL>>=)|(?P<t_LOGICAL_AND>&&)|(?P<t_LESS_EQUAL><=)|(?P<t_NOT_EQUAL>!=)|(?P<t_LESS_THAN><)|(?P<t_LOGICAL_NOT>!)|(?P<t_APOSTROPHE>\')|(?P<t_GREATER_THAN>>)', [None, ('t_ID', 'ID'), ('t_INT_LITERAL', 'INT_LITERAL'), ('t_CHAR_LITERAL', 'CHAR_LITERAL'), ('t_STRING_LITERAL', 'STRING_LITERAL'), ('t_COMMENT', 'COMMENT'), ('t_newline', 'newline'), (None, 'LOGICAL_OR'), (None, 'EQUAL'), (None, 'GREATER_EQUAL'), (None, 'LOGICAL_AND'), (None, 'LESS_EQUAL'), (None, 'NOT_EQUAL'), (None, 'LESS_THAN'), (None, 'LOGICAL_NOT'), (None, 'APOSTROPHE'), (None, 'GREATER_THAN')])]}
+_lexstateignore = {'INITIAL': ' \t'}
+_lexstateerrorf = {'INITIAL': 't_error'}

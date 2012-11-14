@@ -21,3 +21,18 @@
 *.backup
 *.kate-swp
 *.swp
+
+#ignore project specs
+*.pdf
+
+#ignore code samples
+malice_examples/*
+
+#ignore practice stuff
+practice/*
+
+#first-part
+first-part/*
+
+#outputfiles
+*.txt
