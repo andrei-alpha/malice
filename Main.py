@@ -13,7 +13,7 @@ def runFrontend(fileNameAlice, fileNameStem):
     # to do check for errors
 
     # Create Abstract Syntax Tree
-    ast = parser.generateAST()
+    ast = parser.getAST()
     
 
     # Create symbol Table
@@ -22,6 +22,8 @@ def runFrontend(fileNameAlice, fileNameStem):
     # Do static type checking  
     typecheck = TypeChecker.Check() 
 
+    #print '------------ AST ------------' 
+    #print ast
 
     return False, None, None
 

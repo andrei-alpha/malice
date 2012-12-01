@@ -17,10 +17,15 @@
 #ignore junk files from compiling Haskell code
 *.hi
 
+#ignore junk files from compiling python files
+*.pyc
+
 #ignore other junk files
 *.backup
 *.kate-swp
 *.swp
+parsetab.py
+parsetab.pyc
 
 #ignore project specs
 *.pdf

@@ -16,7 +16,6 @@ class Lexer(object):
      'drank': 'DRANK',
      'either': 'EITHER',
      'enough': 'ENOUGH',
-     'enter': 'ENTER',    
      'eventually': 'EVENTUALLY',
      'found': 'FOUND',
      'glass': 'GLASS',
@@ -30,7 +29,6 @@ class Lexer(object):
      'opened': 'OPENED',
      'perhaps': 'PERHAPS',
      'piece': 'PIECE',
-     'please': 'PLEASE',
      'room': 'ROOM',
      's': 'S',
      'said': 'SAID',
@@ -104,7 +102,7 @@ class Lexer(object):
         return t
 
     def t_INT_LITERAL(self, t):
-        r"\d+"
+        r"-?\d+"
         t.value = int(t.value)
         return t
        
@@ -119,11 +117,15 @@ class Lexer(object):
         return t
 
     def t_COMMENT(self, t): 
-        r"\#.*\n"
-        pass
+        r"\#.*\n"  
+        t.lexer.lineno += 1
 
     def t_NEWLINE(self, t):
         r"\n+"
+        t.lexer.lineno += len(t.value)
+
+    def t_SPACE(self, t):
+        r"\s"
         pass
 
     def t_error(self, t):
