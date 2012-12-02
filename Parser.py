@@ -22,7 +22,7 @@ class Parser(object):
 
     def p_CompilationUnit(self, p):
         """compilationUnit : decls"""
-        p[0] = AST.CompilationUnit(p.lineno(1), p.lexpos(1), [p[1]])
+        p[0] = AST.CompilationUnit([p[1]], p.lineno(1), p.lexpos(1))
     
 
     def p_Decls(self, p):
@@ -43,31 +43,31 @@ class Parser(object):
     def p_VarDecl(self, p):
         """varDecl : ID WAS A type terminator
         | ID WAS A type TOO terminator"""
-        p[0] = AST.VarDecl([p[1], p[4]], p.lineno(1), p.lexpos(1))
+        p[0] = AST.VarDecl([p[4]], p.lineno(1), p.lexpos(1), p[1])
 
     def p_VarDecl2(self, p):
         """varDecl : ID WAS A type OF expr terminator"""
-        p[0] = AST.VarDecl([p[4], p[6]], p.lineno(1), p.lexpos(1))
+        p[0] = AST.VarDecl([p[4], p[6]], p.lineno(1), p.lexpos(1), p[1])
   
     def p_ArrDecl(self, p):
         """varDecl : ID HAD expr type terminator"""
-        p[0] = AST.ArrDecl([p[1], p[3], p[4]], p.lineno(1), p.lexpos(1))
+        p[0] = AST.ArrDecl([p[3], p[4]], p.lineno(1), p.lexpos(1), p[1])
     
     def p_FuncDecl(self, p):
         """funcDecl : THE ROOM ID funParams CONTAINED A type body"""
-        p[0] = AST.FuncDecl([p[3], p[4], p[7], p[8]], p.lineno(1), p.lexpos(1))
+        p[0] = AST.FuncDecl([p[7], p[8]], p.lineno(1), p.lexpos(1), p[4])
 
     def p_ProcDecl(self, p):
         """procDecl : THE LOOKING '-' GLASS ID funParams body"""
-        p[0] = AST.ProcDecl([p[5], p[6], p[7]], p.lineno(1), p.lexpos(1))
+        p[0] = AST.ProcDecl([p[6], p[7]], p.lineno(1), p.lexpos(1), p[5])
     
     def p_FunParams(self, p):
         """funParams : '(' ')'
         | '(' funParamsList ')'"""
-        if len(p) == 2:
+        if len(p) == 3:
             p[0] = AST.FunParams([], p.lineno(1), p.lexpos(1))
         else:
-            p[0] = AST.FunParams([p[2]], p.lineno(1), p.lexpos(1))
+            p[0] = p[2]
 
     def p_CallParams(self, p):
         """callParams : '(' ')'
@@ -98,7 +98,7 @@ class Parser(object):
     def p_FunParam(self, p):
         """funParam : type ID 
         | refType ID """
-        p[0] = AST.VarDecl([p[1], True], p.lineno(1), p.lexpos(1))
+        p[0] = AST.VarDecl([p[1]], p.lineno(1), p.lexpos(1), p[2], True)
 
     def p_body(self, p):
         """body : OPENED decls compStatement CLOSED
@@ -228,7 +228,8 @@ class Parser(object):
 
     def p_UnaryExpr(self, p):
         """expr : LOGICAL_NOT expr
-        | '~' expr"""
+        | '~' expr
+        | '-' expr"""
         p[0] = AST.UnaryExpr([p[2]], p.lineno(1), p.lexpos(1), p[2])
 
     def p_VarExpr(self, p):

@@ -1,5 +1,5 @@
 import sys, optparse, os, resource
-import Parser, Lexer, SymbolTable, TypeChecker
+import Parser, Lexer, SymbolTable, TypeChecker, Utils
 
 cmdline = optparse.OptionParser(add_help_option=False)
 (opts, args) = cmdline.parse_args(sys.argv[1:])
@@ -18,13 +18,17 @@ def runFrontend(fileNameAlice, fileNameStem):
 
     # Create symbol Table
     stable = SymbolTable.SymbolTable()
+    stable.visit(ast)
 
     # Do static type checking  
     typecheck = TypeChecker.Check() 
 
+    visitor = Utils.ASTPrint()
     #print '------------ AST ------------' 
     #print ast
-
+    #visitor.visit(ast)
+    #visitor.printEdges()
+    
     return False, None, None
 
 def runBackend(ast, stable, fileNameStem):

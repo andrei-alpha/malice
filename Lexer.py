@@ -102,7 +102,7 @@ class Lexer(object):
         return t
 
     def t_INT_LITERAL(self, t):
-        r"-?\d+"
+        r"\d+"
         t.value = int(t.value)
         return t
        

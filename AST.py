@@ -129,7 +129,7 @@ class CompoundStatement(ASTNode):
 
 class PrintStatement(CompoundStatement):
     def __init__(self, children, line, lexpos):
-        super(PrintStatement, self).__init__(children, line, lexpos, CompoundStatement.__class__.__name__)
+        super(PrintStatement, self).__init__(children, line, lexpos, self.__class__.__name__)
 
     def getExpr(self):
         return self.children[0]

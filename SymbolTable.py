@@ -1,5 +1,13 @@
 #!/bin/python
+import Utils
 
-def SymbolTable():
-    pass
+class SymbolTable(Utils.ASTVisitor):
+    def __init__(self):
+        self.scopeStack = []
+        self.table = {}        
+
+
+    def check_CompilationUnit(self, node):
+        pass
+
 
