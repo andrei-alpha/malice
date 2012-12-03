@@ -1,8 +1,8 @@
 #!bin/python
-import Lexer, AST
+import Lexer, Utils, AST
 import yacc
 
-class Parser(object):
+class Parser(Utils.Debug):
     tokens = Lexer.Lexer.tokens
     precedence = (('left', 'LOGICAL_OR'),
         ('left', 'LOGICAL_AND'),
@@ -55,11 +55,11 @@ class Parser(object):
     
     def p_FuncDecl(self, p):
         """funcDecl : THE ROOM ID funParams CONTAINED A type body"""
-        p[0] = AST.FuncDecl([p[7], p[8]], p.lineno(1), p.lexpos(1), p[4])
+        p[0] = AST.FuncDecl([p[4], p[7], p[8]], p.lineno(3), p.lexpos(3), p[3])
 
     def p_ProcDecl(self, p):
         """procDecl : THE LOOKING '-' GLASS ID funParams body"""
-        p[0] = AST.ProcDecl([p[6], p[7]], p.lineno(1), p.lexpos(1), p[5])
+        p[0] = AST.ProcDecl([p[6], p[7]], p.lineno(5), p.lexpos(5), p[5])
     
     def p_FunParams(self, p):
         """funParams : '(' ')'
@@ -72,15 +72,15 @@ class Parser(object):
     def p_CallParams(self, p):
         """callParams : '(' ')'
         | '(' callParamsList ')'"""
-        if len(p) == 2:
+        if len(p) == 3:
             p[0] = AST.CallParams([], p.lineno(1), p.lexpos(1))
         else:
-            p[0] = AST.CallParams([p[2]], p.lineno(1), p.lexpos(1))
+            p[0] = p[2]
 
     def p_FunParamList(self, p):
         """funParamsList : funParam 
         | funParamsList ',' funParam"""
-        if len(p) == 3:
+        if len(p) == 4:
             p[1].children.append(p[3])
             p[0] = p[1]
         else:
@@ -89,16 +89,19 @@ class Parser(object):
     def p_CallParamList(self, p):
         """callParamsList : expr 
         | callParamsList ',' expr"""
-        if len(p) == 3:
+        if len(p) == 4:
             p[1].children.append(p[3])
             p[0] = p[1]
         else:
             p[0] = AST.CallParams([p[1]], p.lineno(1), p.lexpos(1))
 
     def p_FunParam(self, p):
-        """funParam : type ID 
-        | refType ID """
-        p[0] = AST.VarDecl([p[1]], p.lineno(1), p.lexpos(1), p[2], True)
+        """funParam : type ID"""
+        p[0] = AST.VarDecl([p[1]], p.lineno(2), p.lexpos(2), p[2])
+
+    def p_FunParam2(self, p):
+        """funParam : refType ID"""
+        p[0] = AST.VarDecl([p[1]], p.lineno(2), p.lexpos(2), p[2], True)
 
     def p_body(self, p):
         """body : OPENED decls compStatement CLOSED
@@ -115,7 +118,7 @@ class Parser(object):
         """compStatement : stmt 
         | compStatement stmt"""
         if len(p) == 2:
-            p[0] = AST.CompoundStatement([[p[1]]], p.lineno(1), p.lexpos(1))
+            p[0] = AST.CompoundStatement([p[1]], p.lineno(1), p.lexpos(1))
         else:
             p[1].children.append(p[2])
             p[0] = p[1]
@@ -130,24 +133,24 @@ class Parser(object):
 
     def p_AssignStatement(self, p):
         """stmt : expr BECAME expr terminator """
-        p[0] = AST.AssignStatement([p[1], p[3]], p.lineno(1), p.lexpos(1))
+        p[0] = AST.AssignStatement([p[1], p[3]], p.lineno(2), p.lexpos(2))
     
     def p_PrintStatement(self, p):
         """stmt : expr SPOKE terminator
         | expr SAID ALICE terminator"""
-        p[0] = AST.PrintStatement([p[1]], p.lineno(1), p.lexpos(1))
+        p[0] = AST.PrintStatement([p[1]], p.lineno(2), p.lexpos(2))
 
     def p_ReadStatement(self, p):
         """stmt : WHAT WAS expr '?'"""
-        p[0] = AST.PrintStatement([p[3]], p.lineno(1), p.lexpos(1))
+        p[0] = AST.ReadStatement([p[3]], p.lineno(1), p.lexpos(1))
 
     def p_IncrementStatement(self, p):
         """stmt : expr ATE terminator """
-        p[0] = AST.IncrementStatement([p[1]], p.lineno(1), p.lexpos(1))
+        p[0] = AST.IncrementStatement([p[1]], p.lineno(2), p.lexpos(2))
 
     def p_DecrementStatement(self, p):
         """stmt : expr DRANK terminator"""
-        p[0] = AST.DecrementStatement([p[1]], p.lineno(1), p.lexpos(1))
+        p[0] = AST.DecrementStatement([p[1]], p.lineno(2), p.lexpos(2))
 
     def p_ReturnStatement(self, p):
         """stmt : ALICE FOUND  expr"""
@@ -155,7 +158,7 @@ class Parser(object):
     
     def p_CallStatement(self, p):
         """stmt : ID callParams terminator"""
-        p[0] = AST.CallStatement([p[1]], p.lineno(1), p.lexpos(1))
+        p[0] = AST.CallStatement([p[2]], p.lineno(1), p.lexpos(1), p[1])
 
     def p_LoopStatement(self, p):
         """stmt : EVENTUALLY '(' expr ')' BECAUSE compStatement ENOUGH TIMES"""
@@ -163,7 +166,7 @@ class Parser(object):
 
     def p_IfStatement(self, p):
         """stmt : EITHER '(' expr ')' SO compStatement OR compStatement BECAUSE ALICE WAS UNSURE WHICH"""
-        p[0] = AST.IfStatement([p[3], p[6], p[8]], p.lineno(1), p.lexpos(1))
+        p[0] = AST.IfStatement([p[3], p[6], p[8]], p.lineno(2), p.lexpos(2))
 
     def p_IfStatement2(self, p):
         """stmt : condStatement BECAUSE ALICE WAS UNSURE WHICH
@@ -178,7 +181,7 @@ class Parser(object):
         """condStatement : PERHAPS '(' expr ')' SO compStatement
         | condStatement OR MAYBE '(' expr ')' SO compStatement"""
         if len(p) == 7:
-            p[0] = AST.IfStatement([p[3], p[6]], p.lineno(1), p.lexpos(1))
+            p[0] = AST.IfStatement([p[3], p[6]], p.lineno(2), p.lexpos(2))
         else:
             p[1].children += [p[5], p[8]]
             p[0] = p[1]
@@ -224,25 +227,25 @@ class Parser(object):
         | expr GREATER_EQUAL expr
         | expr LESS expr
         | expr GREATER expr"""
-        p[0] = AST.BinaryExpr([p[1], p[3]], p.lineno(1), p.lexpos(1), p[2])
+        p[0] = AST.BinaryExpr([p[1], p[3]], p.lineno(2), p.lexpos(2), p[2])
 
     def p_UnaryExpr(self, p):
         """expr : LOGICAL_NOT expr
         | '~' expr
         | '-' expr"""
-        p[0] = AST.UnaryExpr([p[2]], p.lineno(1), p.lexpos(1), p[2])
+        p[0] = AST.UnaryExpr([p[2]], p.lineno(1), p.lexpos(1), p[1])
 
     def p_VarExpr(self, p):
         """expr : ID"""
-        p[0] = AST.VarExpr([p[1]], p.lineno(1), p.lexpos(1))
+        p[0] = AST.VarExpr([], p.lineno(1), p.lexpos(1), p[1])
 
     def p_ArrExpr(self, p):
         """expr : ID APOSTROPHE S expr PIECE"""
-        p[0] = AST.ArrExpr([p[4]], p.lineno(1), p.lexpos(1))
+        p[0] = AST.ArrExpr([p[4]], p.lineno(1), p.lexpos(1), p[1])
 
     def p_CallExpr(self, p):
         """expr : ID callParams """
-        p[0] = AST.CallExpr([p[2]], p.lineno(1), p.lexpos(1))
+        p[0] = AST.CallExpr([p[2]], p.lineno(1), p.lexpos(1), p[1])
 
     def p_ExprBrackets(self, p):
         """expr : '(' expr ')' """
@@ -250,26 +253,19 @@ class Parser(object):
 
     def p_IntExpr(self, p):
         """expr : INT_LITERAL"""
-        p[0] = AST.IntExpr([p[1]], p.lineno(1), p.lexpos(1))
+        p[0] = AST.IntExpr([], p.lineno(1), p.lexpos(1), p[1])
 
     def p_CharExpr(self, p):
         """expr : CHAR_LITERAL"""
-        p[0] = AST.CharExpr([p[1]], p.lineno(1), p.lexpos(1))
+        p[0] = AST.CharExpr([], p.lineno(1), p.lexpos(1), p[1])
 
     def p_StringExpr(self, p):
         """expr : STRING_LITERAL"""
-        p[0] = AST.StringExpr([p[1]], p.lineno(1), p.lexpos(1))
+        p[0] = AST.StringExpr([], p.lineno(1), p.lexpos(1), p[1])
 
     def parse(self, Input):
         self.ast = self.parser.parse(Input, debug=0)
         self.errors += self.lexer.errors
-
-        if len(self.errors) > 0:
-            message = 'Parse error encountered in %s' % self.__class__.__name__
-            print '%s %s %s' % ('---------------', message, '---------------')
-            for err in self.errors:
-                print str(err)
-
 
         data = self.lexer.tokenize(Input)
         #for token in data:
@@ -279,11 +275,11 @@ class Parser(object):
     def getAST(self):
         return self.ast
 
-    def getErrors(self):
-        return self.errors    
+    def hasErrors(self):
+        return len(self.errors) > 0    
 
     def __init__(self):
+        Utils.Debug.__init__(self)
         self.lexer = Lexer.Lexer()
         self.parser = yacc.yacc(module=self)
-        self.errors = []
         

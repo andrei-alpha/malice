@@ -17,7 +17,7 @@ class ASTNode(object):
         return table
 
     def __repr__(self):
-        return "ASTNode(%r, %r)" % (self.nodeType, self.children)
+        return "ASTNode(%r, %r, %r)" % (self.nodeType, self.line, self.children)
 
     def getType(self):
         return self.nodeType
@@ -62,11 +62,14 @@ class VarDecl(Decls):
         super(VarDecl, self).__init__(children, line, lexpos, name, self.__class__.__name__)
 
     def getType(self):
+        return self.children[0]
+
+    def getExpr(self):
         return self.children[1]
 
 class ArrDecl(Decls):
     def __init__(self, children, line, lexpos, name):
-        super(ArrDecl, self).__init__(children, line, lexpos, self.__class__.__name__)
+        super(ArrDecl, self).__init__(children, line, lexpos, name, self.__class__.__name__)
 
     def getSizeExpr(self):
         return self.children[0]
@@ -177,10 +180,9 @@ class ReturnStatement(ASTNode):
     def getExpr(self):
         return self.children[0]
 
-class CallStatement(ASTNode):
-    def __init__(self, children, line, lexpos, nodeType=''):
-        nodeType = setName(self, nodeType)
-        super(CallStatement, self).__init__(nodeType, children, line, lexpos)
+class CallStatement(Decls):
+    def __init__(self, children, line, lexpos, name):
+        super(CallStatement, self).__init__(children, line, lexpos, name, self.__class__.__name__)
 
     def getFunParams(self):
         return self.children[0].children
@@ -239,47 +241,49 @@ class BinaryExpr(Operator):
     def getRightExpr(self):
         return self.children[1]
 
-class ArrExpr(ASTNode):
-    def __init__(self, children, line, lexpos, nodeType=''):
-        nodeType = setName(self, nodeType)
-        super(ArrExpr, self).__init__(nodeType, children, line, lexpos)
+    @staticmethod
+    def isBoolean(operator):
+        return operator == '&&' or operator == '||'
+
+    @staticmethod
+    def isRelational(operator):
+        return operator == '<' or operator == '>' or operator == '<=' or operator == '>=' or operator == '=='
+
+class ArrExpr(Decls):
+    def __init__(self, children, line, lexpos, name):
+        super(ArrExpr, self).__init__(children, line, lexpos, name, self.__class__.__name__)
 
     def getExpr(self):
         return self.children[0]
 
-class CallExpr(ASTNode):
-    def __init__(self, children, line, lexpos, nodeType=''):
-        nodeType = setName(self, nodeType)
-        super(CallExpr, self).__init__(nodeType, children, line, lexpos)
+class CallExpr(Decls):
+    def __init__(self, children, line, lexpos, name):
+        super(CallExpr, self).__init__(children, line, lexpos, name, self.__class__.__name__)
 
     def getCallParams(self):
         return self.children[0]
 
-class VarExpr(ASTNode):
-    def __init__(self, children, line, lexpos, nodeType=''):
-        nodeType = setName(self, nodeType)
-        super(VarExpr, self).__init__(nodeType, children, line, lexpos)
+class VarExpr(Decls):
+    def __init__(self, children, line, lexpos, name):
+        super(VarExpr, self).__init__(children, line, lexpos, name, self.__class__.__name__)
 
-class IntExpr(ASTNode):
-    def __init__(self, children, line, lexpos, nodeType=''):
-        nodeType = setName(self, nodeType)
-        super(IntExpr, self).__init__(nodeType, children, line, lexpos)
+class IntExpr(Decls):
+    def __init__(self, children, line, lexpos, name):
+        super(IntExpr, self).__init__(children, line, lexpos, name, self.__class__.__name__)
     
     def getExpr(self):
         return self.children[0]
 
-class CharExpr(ASTNode):
-    def __init__(self, children, line, lexpos, nodeType=''):
-        nodeType = setName(self, nodeType)
-        super(CharExpr, self).__init__(nodeType, children, line, lexpos)
+class CharExpr(Decls):
+    def __init__(self, children, line, lexpos, name):
+        super(CharExpr, self).__init__(children, line, lexpos, name, self.__class__.__name__)
  
     def getExpr(self):
         return self.children[0]
 
-class StringExpr(ASTNode):
-    def __init__(self, children, line, lexpos, nodeType=''):
-        nodeType = setName(self, nodeType)
-        super(StringExpr, self).__init__(nodeType, children, line, lexpos)
+class StringExpr(Decls):
+    def __init__(self, children, line, lexpos, name):
+        super(StringExpr, self).__init__(children, line, lexpos, name, self.__class__.__name__)
     
     def getExpr(self):
         return self.children[0]
@@ -321,3 +325,8 @@ class StringType(ASTNode):
     def __init__(self, children, line, lexpos, nodeType=''):
         nodeType = setName(self, nodeType)
         super(StringType, self).__init__(nodeType, children, line, lexpos)
+
+class BooleanType(ASTNode):
+    def __init__(self, children, line, lexpos, nodeType=''):
+        nodeType = setName(self, nodeType)
+        super(BooleanType, self).__init__(nodeType, children, line, lexpos)
