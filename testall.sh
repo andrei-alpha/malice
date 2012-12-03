@@ -21,7 +21,7 @@ do
     fi
 
     $EXE $file
-    diff $OK1 $OK2
+    # diff $OK1 $OK2
     CNT=$(expr $CNT + 1) 
 done
 
@@ -33,7 +33,7 @@ do
     fi
 
     $EXE $file
-    diff $OK1 $OK2
+    # diff $OK1 $OK2
     CNT=$(expr $CNT + 1)
 done
 

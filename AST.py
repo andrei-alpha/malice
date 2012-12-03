@@ -1,8 +1,16 @@
+<<<<<<< HEAD
+
+=======
+# This module contains the nodes created by the parser.
+
+# This functions sets the name for a node in the ASTNode.
+>>>>>>> 1105419... MAlice milestone, added some useful comments, V power
 def setName(self, nodeType):
     if nodeType == '':
         return self.__class__.__name__
     return nodeType
 
+# This is the constructor
 class ASTNode(object):
     def __init__(self, nodeType, children, line, lexpos):
         self.nodeType = nodeType            
@@ -17,7 +25,7 @@ class ASTNode(object):
         return table
 
     def __repr__(self):
-        return "ASTNode(%r, %r, %r)" % (self.nodeType, self.line, self.children)
+        return "ASTNode(%r, %r)" % (self.nodeType, self.children)
 
     def getType(self):
         return self.nodeType
@@ -50,22 +58,21 @@ class Body(ASTNode):
     def getStatement(self):
         return self.children[1]
 
-class FormalParams(ASTNode):
-    def __init__(self, children, line, lexpos, nodeType=''):
-        nodeType = setName(self, nodeType)
-        super(FormalParams, self).__init__(nodeType, children, line, lexpos)
-
-
 class VarDecl(Decls):
     def __init__(self, children, line, lexpos, name, ref=False):
         self.ref = ref
         super(VarDecl, self).__init__(children, line, lexpos, name, self.__class__.__name__)
 
-    def getType(self):
+    def getBaseType(self):
         return self.children[0]
 
+    def getType(self):
+        return self.children[0].nodeType
+
     def getExpr(self):
-        return self.children[1]
+        if len(self.children) == 2:
+            return self.children[1]
+        return None
 
 class ArrDecl(Decls):
     def __init__(self, children, line, lexpos, name):
@@ -81,18 +88,18 @@ class FuncDecl(Decls):
     def __init__(self, children, line, lexpos, name):
         super(FuncDecl, self).__init__(children, line, lexpos, name, self.__class__.__name__)
 
-    def getFormalParams(self):
-        return self.children[0]
-
-    def getBody(self):
+    def getReturnType(self):
         return self.children[1]
+
+    def getFunParams(self):
+        return self.children[0].children
 
 class ProcDecl(Decls):
     def __init__(self, children, line, lexpos, name):
         super(ProcDecl, self).__init__(children, line, lexpos, name, self.__class__.__name__)
 
-    def getFormalParams(self):
-        return self.children[0]
+    def getFunParams(self):
+        return self.children[0].children
 
     def getBody(self):
         return self.children[1]
@@ -126,7 +133,7 @@ class CompoundStatement(ASTNode):
         return self.children[0]
 
     def getStatementList(self):
-        return self.childre[1]        
+        return self.children[1]        
 
 #Statements
 
@@ -163,7 +170,7 @@ class IncrementStatement(CompoundStatement):
         super(IncrementStatement, self).__init__(children, line, lexpos, self.__class__.__name__)
 
     def getExpr(self):
-        return self.childre[0]
+        return self.children[0]
 
 class DecrementStatement(CompoundStatement):
     def __init__(self, children, line, lexpos):
@@ -188,7 +195,7 @@ class CallStatement(Decls):
         return self.children[0].children
 
     def NumberOfFunParams(self):
-        return len(self.childre[0].children)
+        return len(self.children[0].children)
 
 class LoopStatement(ASTNode):
     def __init__(self, children, line, lexpos, nodeType=''):
@@ -241,13 +248,11 @@ class BinaryExpr(Operator):
     def getRightExpr(self):
         return self.children[1]
 
-    @staticmethod
-    def isBoolean(operator):
+    def isBoolean(self, operator):
         return operator == '&&' or operator == '||'
 
-    @staticmethod
-    def isRelational(operator):
-        return operator == '<' or operator == '>' or operator == '<=' or operator == '>=' or operator == '=='
+    def isRelational(self, operator):
+        return operator == '!=' or operator == '<' or operator == '>' or operator == '<=' or operator == '>=' or operator == '=='
 
 class ArrExpr(Decls):
     def __init__(self, children, line, lexpos, name):
@@ -271,22 +276,22 @@ class IntExpr(Decls):
     def __init__(self, children, line, lexpos, name):
         super(IntExpr, self).__init__(children, line, lexpos, name, self.__class__.__name__)
     
-    def getExpr(self):
-        return self.children[0]
+    def getValue(self):
+        return self.name
 
 class CharExpr(Decls):
     def __init__(self, children, line, lexpos, name):
         super(CharExpr, self).__init__(children, line, lexpos, name, self.__class__.__name__)
  
-    def getExpr(self):
-        return self.children[0]
+    def getValue(self):
+        return self.name
 
 class StringExpr(Decls):
     def __init__(self, children, line, lexpos, name):
         super(StringExpr, self).__init__(children, line, lexpos, name, self.__class__.__name__)
     
-    def getExpr(self):
-        return self.children[0]
+    def getValue(self):
+        return self.name
 
 class Factor(ASTNode):
     def __init__(self, children, line, lexpos, nodeType=''):
@@ -328,5 +333,5 @@ class StringType(ASTNode):
 
 class BooleanType(ASTNode):
     def __init__(self, children, line, lexpos, nodeType=''):
-        nodeType = setName(self, nodeType)
-        super(BooleanType, self).__init__(nodeType, children, line, lexpos)
+        node = setName(self, nodeType)
+        super(StringType, self).__init__(nodeType, children, line, lexpos)

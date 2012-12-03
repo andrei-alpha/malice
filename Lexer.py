@@ -130,7 +130,7 @@ class Lexer(object):
 
     def t_error(self, t):
         t.lexer.skip(1)
-        self.errors.append( ("Unknown symbol", t.value) )
+        self.errors.append("Lexer error: '" + str(t.value) + "'")
 
     def __init__(self):
         self.lexer = lex.lex(module = self)

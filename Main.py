@@ -10,26 +10,37 @@ def runFrontend(fileNameAlice, fileNameStem):
     with open(fileNameAlice, 'r') as fin:
         line = fin.read()
         parser.parse(line)
-    # to do check for errors
+    # Check for errors
+    if parser.hasErrors():
+        parser.printErrors()
+        return False, None, None
 
     # Create Abstract Syntax Tree
     ast = parser.getAST()
-    
+    #print ast    
 
     # Create symbol Table
     stable = SymbolTable.SymbolTable()
     stable.visit(ast)
 
-    # Do static type checking  
-    typecheck = TypeChecker.Check() 
+    if stable.hasErrors():
+        stable.printErrors()
+        return False, None, None
+
+    #  Do static type checking  
+    typecheck = TypeChecker.TypeChecker() 
+    typecheck.visit(ast)
+
+    if typecheck.hasErrors():
+        typecheck.printErrors()
+        return False, None, None
 
     visitor = Utils.ASTPrint()
     #print '------------ AST ------------' 
-    #print ast
     #visitor.visit(ast)
     #visitor.printEdges()
     
-    return False, None, None
+    return True, ast, stable
 
 def runBackend(ast, stable, fileNameStem):
     # Do code generation
@@ -41,6 +52,7 @@ def run (fileName):
     success, ast, stable = runFrontend(fileName, fileNameStem) 
 
     if success:
+        print 'Compilation Successful'
         runBackend(ast, stable, fileNameStem)
     print ''
 
