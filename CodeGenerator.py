@@ -81,6 +81,7 @@ class CodeGenerator(Utils.ASTVisitor):
         Utils.ASTVisitor.__init__(self)
         self.regCnt = 0 
         self.label = 0
+        self.funcCnt = 0
         self.subProg = 0
         self.labels = {}
         self.globalCode = []
@@ -95,6 +96,10 @@ class CodeGenerator(Utils.ASTVisitor):
     def getNewLabel(self):
         self.label = self.label + 1
         return str( hex(self.label) )      
+
+    def getNewFuncId(self):
+        self.funcCnt += 1
+        return str(self.funcCnt)
 
     def printCode(self):
         print ''
@@ -127,7 +132,7 @@ class CodeGenerator(Utils.ASTVisitor):
 
     def check_FuncDecl(self, node):
         self.subProg += 1
-        label = node.name
+        label = node.name + self.getNewFuncId()
         self.labels[node.name] = label
         self.addCode( ThreeAdrCode.Void('', label, []) )   
         Utils.ASTVisitor.check(self, node)
@@ -137,7 +142,10 @@ class CodeGenerator(Utils.ASTVisitor):
     
     def check_ProcDecl(self, node):
         self.subProg += 1
-        label = node.name
+        if self.subProg == 1:
+            label = node.name
+        else:
+            label = node.name + self.getNewFuncId()
         self.labels[node.name] = label
         self.addCode( ThreeAdrCode.Void('', label, []) )
         Utils.ASTVisitor.check(self, node)
