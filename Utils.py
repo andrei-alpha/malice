@@ -4,6 +4,7 @@ class Debug(object):
 
     def __init__(self):
         self.errors = []
+        self.code = []
 
     def printErrors(self):
         if len(self.errors) > 0:

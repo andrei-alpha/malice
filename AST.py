@@ -213,6 +213,17 @@ class IfStatement(ASTNode):
         nodeType = setName(self, nodeType)
         super(IfStatement, self).__init__(nodeType, children, line, lexpos)
 
+    def hasElse(self):
+        return len(self.children) % 2 == 1
+
+    def isElseBody(self, child):
+        index = self.children.index(child)
+        return self.hasElse() and index == len(self.children) - 1        
+    
+    def isLastCond(self, child):
+        index = self.children.index(child)
+        return index == len(self.children) - 2 or index == len(self.children) - 3 
+
     def getExpr(self):
         return self.children[0]
 
@@ -265,8 +276,8 @@ class CallExpr(Decls):
     def __init__(self, children, line, lexpos, name):
         super(CallExpr, self).__init__(children, line, lexpos, name, self.__class__.__name__)
 
-    def getCallParams(self):
-        return self.children[0]
+    def getFunParams(self):
+        return self.children[0].children
 
 class VarExpr(Decls):
     def __init__(self, children, line, lexpos, name):

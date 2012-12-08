@@ -1,5 +1,5 @@
 import sys, optparse, os, resource
-import Parser, Lexer, SymbolTable, TypeChecker, Utils
+import Parser, Lexer, SymbolTable, CodeGenerator, TypeChecker, Utils
 
 cmdline = optparse.OptionParser(add_help_option=False)
 (opts, args) = cmdline.parse_args(sys.argv[1:])
@@ -35,7 +35,7 @@ def runFrontend(fileNameAlice, fileNameStem):
         typecheck.printErrors()
         return False, None, None
 
-    visitor = Utils.ASTPrint()
+    #visitor = Utils.ASTPrint()
     #print '------------ AST ------------' 
     #visitor.visit(ast)
     #visitor.printEdges()
@@ -44,7 +44,9 @@ def runFrontend(fileNameAlice, fileNameStem):
 
 def runBackend(ast, stable, fileNameStem):
     # Do code generation
-    pass
+    codeGenerator = CodeGenerator.CodeGenerator()
+    codeGenerator.visit(ast)
+    codeGenerator.printCode()
 
 def run (fileName):
     print 'Analysing file ', fileName

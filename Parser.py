@@ -154,7 +154,7 @@ class Parser(Utils.Debug):
 
     def p_ReturnStatement(self, p):
         """stmt : ALICE FOUND  expr"""
-        p[0] = AST.ReturnStatement([p[1]], p.lineno(1), p.lexpos(1))
+        p[0] = AST.ReturnStatement([p[3]], p.lineno(1), p.lexpos(1))
     
     def p_CallStatement(self, p):
         """stmt : ID callParams terminator"""
@@ -188,15 +188,15 @@ class Parser(Utils.Debug):
 
     def p_IntType(self, p):
         """type : NUMBER"""
-        p[0] = AST.IntType([], p.lineno(1), p.lexpos(1))
+        p[0] = AST.IntType([p[1]], p.lineno(1), p.lexpos(1))
 
     def p_CharType(self, p):
         """type : LETTER"""
-        p[0] = AST.CharType([], p.lineno(1), p.lexpos(1))
+        p[0] = AST.CharType([p[1]], p.lineno(1), p.lexpos(1))
 
     def p_StringType(self, p):
         """type : SENTENCE"""
-        p[0] = AST.StringType([], p.lineno(1), p.lexpos(1))
+        p[0] = AST.StringType([p[1]], p.lineno(1), p.lexpos(1))
     
     def p_RefType(self, p):
         """refType : SPIDER type"""
