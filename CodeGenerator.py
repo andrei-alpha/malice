@@ -1,79 +1,5 @@
 from itertools import chain
-import Utils, AST
-
-class CodeNode:
-    def __init__(self, name, label, children):
-        self.name = name
-        self.label = label
-        self.children = children
-
-    def __str__(self):
-        s = ''
-                
-        if not self.label == '':
-            s += str(self.label) + ': '
-        if not self.name == 'assign':
-            s += self.name + ' '
-        for child in self.children:
-            s += str(child) + ' '
-    
-        return s
-
-class ThreeAdrCode(object):
-    def __init__(self):
-        pass
-        
-    @staticmethod
-    def Push(label, children):
-        return CodeNode('push', label, children)
-
-    @staticmethod
-    def Pop(label, children):
-        return CodeNode('pop', label, children)
-
-    @staticmethod
-    def Goto(label, jump):
-        return CodeNode('goto', label, [jump])
- 
-    @staticmethod
-    def Return(label, children):
-        return CodeNode('return', label, children)
-
-    @staticmethod
-    def End(label, children):
-        return CodeNode('end', label, [])
-
-    @staticmethod
-    def Assign(label, children):
-        return CodeNode('assign', label, children)
-
-    @staticmethod
-    def Print(label ,var):
-        return CodeNode('print', label, [var])
-
-    @staticmethod
-    def Read(label, var):
-        return CodeNode('read', label, [var])
-
-    @staticmethod
-    def Call(label, name):
-        return CodeNode('call', label, [name])
-
-    @staticmethod
-    def IfTrue(label, children):
-        return CodeNode('ifTrue', label, children)
-
-    @staticmethod
-    def Decl(label, children):
-        return CodeNode('decl', label, children)
-
-    @staticmethod
-    def IfFalse(label, children):
-        return CodeNode('ifFalse', label, children)
-
-    @staticmethod
-    def Void(name, label, children):
-        return CodeNode(name, label, children)
+import Utils, AST, ThreeAdrCode
 
 class CodeGenerator(Utils.ASTVisitor): 
 
@@ -99,6 +25,7 @@ class CodeGenerator(Utils.ASTVisitor):
 
     def getNewFuncId(self):
         self.funcCnt += 1
+        return ''
         return str(self.funcCnt)
 
     def printCode(self):
@@ -111,6 +38,9 @@ class CodeGenerator(Utils.ASTVisitor):
             if line.label == '' or line.name == 'end':
                 print '' 
         print ''
+
+    def getCode(self):
+        return self.code
 
     def addCode(self, node):
         if self.subProg == 0:
@@ -134,7 +64,7 @@ class CodeGenerator(Utils.ASTVisitor):
         self.subProg += 1
         label = node.name + self.getNewFuncId()
         self.labels[node.name] = label
-        self.addCode( ThreeAdrCode.Void('', label, []) )   
+        self.addCode( ThreeAdrCode.Func('', label, []) )   
         Utils.ASTVisitor.check(self, node)
         label = self.getNewLabel()
         self.addCode( ThreeAdrCode.End(label, []) )
@@ -147,7 +77,7 @@ class CodeGenerator(Utils.ASTVisitor):
         else:
             label = node.name + self.getNewFuncId()
         self.labels[node.name] = label
-        self.addCode( ThreeAdrCode.Void('', label, []) )
+        self.addCode( ThreeAdrCode.Func('', label, []) )
         Utils.ASTVisitor.check(self, node)
         label = self.getNewLabel()
         self.addCode( ThreeAdrCode.End(label, []) )
@@ -213,7 +143,6 @@ class CodeGenerator(Utils.ASTVisitor):
         self.vars[node] = [node.name, '[', indexExpr, ']']
     
     def check_CallExpr(self, node):
-        #TO DO:
         Utils.ASTVisitor.check(self, node)
         self.pushCallParams(node.getFunParams() )
         var = self.getNewReg()
