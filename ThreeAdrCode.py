@@ -1,9 +1,10 @@
 import CodeGenerator
 
 class CodeNode(object):
-    def __init__(self, name, label, children):
+    def __init__(self, name, label, children, single = False):
         self.name = name
         self.label = label
+        self.single = single
         self.children = children
 
     def isFuncCall(self):  
@@ -11,6 +12,12 @@ class CodeNode(object):
  
     def isOnlyJump(self):
         return isinstance(self, Return) or isinstance(self, Goto) or self.isFuncCall()
+
+    def getVar(self):
+        return self.children[0]
+
+    def getVarName(self):
+        return self.children[0].name
 
     def __str__(self):
         s = ''
@@ -26,17 +33,14 @@ class CodeNode(object):
 
 class Push(CodeNode):
     def __init__(self, label, children):
-        super(Push, self).__init__('push', label, children)
+        super(Push, self).__init__('push', label, children, True)
 
     def getVar():
         return self.children[0]
 
 class Pop(CodeNode):
     def __init__(self, label, children):
-        super(Pop, self).__init__('pop', label, children)
-
-    def getVar():
-        return self.children[0]
+        super(Pop, self).__init__('pop', label, children, True)
 
 class Goto(CodeNode):
     def __init__(self, label, jump):
@@ -44,11 +48,8 @@ class Goto(CodeNode):
 
 class Return(CodeNode):
     def __init__(self, label, children):
-        super(Return, self).__init__('return', label, children)
+        super(Return, self).__init__('return', label, children, True)
     
-    def getVar():
-        return self.children[0]
-
 class End(CodeNode):
     def __init__(self, label, children):
         super(End, self).__init__('end', label, children)
@@ -65,25 +66,32 @@ class Assign(CodeNode):
         return None
 
     def First(self):
-        return self.children[0]
-
-    def Second(self):
         if len(self.children) == 4:
             return self.children[3]
         return self.children[2]
+
+    def FirstName(self):
+        if len(self.children) == 4:
+            return self.children[3].name
+        return self.children[2].name
     
-    def Third(self):
+    def Second(self):
         if len(self.children) == 5:
             return self.children[4]
         return None
 
+    def SecondName(self):
+        if len(self.children) == 5:
+            return self.chilren[4].name
+        return ""
+
 class Print(CodeNode):
     def __init__(self, label, var):
-        super(Print, self).__init__('print', label, [var])
+        super(Print, self).__init__('print', label, [var], True)
 
 class Read(CodeNode):
     def __init__(self, label, var):
-        super(Read, self).__init__('read', label, [var])
+        super(Read, self).__init__('read', label, [var], True)
 
 class Call(CodeNode):
     def __init__(self, label, name):
