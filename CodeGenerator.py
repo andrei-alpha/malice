@@ -1,6 +1,76 @@
 from itertools import chain
 import Utils, AST, ThreeAdrCode
 
+class Type(object):
+    def __init__(self, type):
+        self.type = type
+
+    def getType(self):
+        return self.type
+
+class Var(Type):
+    def __init__(self, name, ref = False):
+        super(Var, self).__init__('var')
+        self.name = str(name)
+        self.ref = ref
+
+    def __str__(self):
+        return ('&' if self.ref == True else "") + self.name
+
+    def isInt(self):
+        return self.isdigit()        
+
+    def isVar(self):
+        return not self.isdigit()
+
+class Arr(Type):
+    def __init__(self, name, index):
+        super(Arr, self).__init__('arr')
+        self.name = name
+        self.index = index
+
+    def __str__(self):
+        return self.name + "[" + self.index.name + "]"
+
+class Char(Type):
+    def __init__(self, name):
+        super(Char, self).__init__('char')
+        self.name = name
+
+    def __str__(self):
+        return "'" + self.name + "'"
+
+class String(Type):
+    def __init__(self, name):
+        super(String, self).__init__('string')
+        self.name = name
+
+    def __str__(self):
+        return '"' + self.name + '"'
+
+class Func(Type):
+    def __init__(self, name):
+        super(Func, self).__init__('func')
+        self.name = name
+
+    def __str__(self):
+        return "call " + self.name + "()"
+
+class Operator(Type):
+    def __init__(self, oper):
+        super(Operator, self).__init__('operator')
+        self.oper = oper
+
+    def __str__(self):
+        return self.oper
+
+class FuncReg(Type):  
+    def __init__(self):
+        super(FuncReg, self).__init__('funcreg')
+    
+    def __str__(self):
+        return "#eax"
+
 class CodeGenerator(Utils.ASTVisitor): 
 
     def __init__(self):
@@ -34,7 +104,7 @@ class CodeGenerator(Utils.ASTVisitor):
         for line in self.code:
             if line.label == '':
                 print ''
-            print line   
+            print '>', self.code.index(line), line   
             if line.label == '' or line.name == 'end':
                 print '' 
         print ''
@@ -52,9 +122,9 @@ class CodeGenerator(Utils.ASTVisitor):
         for node in params:
             label = self.getNewLabel()
             if isinstance(node, AST.VarExpr) and (node.decl.getType() == 'ArrDecl' or node.decl.ref == True):
-                self.addCode( ThreeAdrCode.Push(label, ['&', self.vars[node] ]) )
+                self.addCode( ThreeAdrCode.Push(label, [self.vars[node]] ) )
             else:
-                self.addCode( ThreeAdrCode.Push(label, [ self.vars[node] ]) )     
+                self.addCode( ThreeAdrCode.Push(label, [self.vars[node]] ) )     
 
     def check_CompilationUnit(self, node):
         Utils.ASTVisitor.check(self, node)
@@ -62,29 +132,31 @@ class CodeGenerator(Utils.ASTVisitor):
 
     def check_FuncDecl(self, node):
         self.subProg += 1
-        label = node.name + self.getNewFuncId()
-        self.labels[node.name] = label
-        self.addCode( ThreeAdrCode.Func('', label, []) )   
+        startLabel = node.name + self.getNewFuncId()
+        endLabel = self.getNewLabel() 
+        self.labels[node.name] = startLabel
+        self.addCode( ThreeAdrCode.Goto('', endLabel) )
+        self.addCode( ThreeAdrCode.Func('', startLabel, []) )
         Utils.ASTVisitor.check(self, node)
-        label = self.getNewLabel()
-        self.addCode( ThreeAdrCode.End(label, []) )
+        self.addCode( ThreeAdrCode.End(endLabel, []) )
         self.subProg -= 1
     
     def check_ProcDecl(self, node):
         self.subProg += 1
         if self.subProg == 1:
-            label = node.name
+            startLabel = node.name
         else:
-            label = node.name + self.getNewFuncId()
-        self.labels[node.name] = label
-        self.addCode( ThreeAdrCode.Func('', label, []) )
+            startLabel = node.name + self.getNewFuncId()
+        endLabel = self.getNewLabel()
+        self.labels[node.name] = startLabel
+        self.addCode( ThreeAdrCode.Goto('', endLabel) )
+        self.addCode( ThreeAdrCode.Func('', startLabel, []) )
         Utils.ASTVisitor.check(self, node)
-        label = self.getNewLabel()
-        self.addCode( ThreeAdrCode.End(label, []) )
+        self.addCode( ThreeAdrCode.End(endLabel, []) )
         self.subProg -= 1
 
     def check_VarDecl(self, node):
-        var = node.name
+        var = Var(node.name)
         self.vars[ node ] = var
         label = self.getNewLabel()
 
@@ -92,7 +164,9 @@ class CodeGenerator(Utils.ASTVisitor):
             #We use the var name for the moment
             # var = self.getNewReg()
             if node.ref == True:
-                self.addCode( ThreeAdrCode.Pop(label, ['&', var]) )
+                var = Var(node.name, True)
+                self.vars[ node ] = var
+                self.addCode( ThreeAdrCode.Pop(label, [var] ) )
             else:
                 self.addCode( ThreeAdrCode.Pop(label, [var]) )
             Utils.ASTVisitor.check(self, node)
@@ -102,45 +176,46 @@ class CodeGenerator(Utils.ASTVisitor):
             expr = node.getExpr()
             if expr:
                 label = self.getNewLabel()
-                self.addCode( ThreeAdrCode.Assign(label, [var, '=', self.vars[expr] ]) )
+                self.addCode( ThreeAdrCode.Assign(label, [var, '=', Var(self.vars[expr]) ]) )
 
     def check_ArrDecl(self, node):
         Utils.ASTVisitor.check(self, node)
         label = self.getNewLabel()
         var = node.name
-        self.vars[ node ] = var
         sizeExpr = self.vars[ node.getSizeExpr() ]
-        self.addCode( ThreeAdrCode.Decl(label, [var, '[', sizeExpr, ']']) )
+        arr = Arr(var, sizeExpr)
+        self.vars[ node ] = arr
+        self.addCode( ThreeAdrCode.Decl(label, [arr]) )
 
     def check_IntExpr(self, node):
         Utils.ASTVisitor.check(self, node)
-        var = self.getNewReg()
+        var = Var(self.getNewReg())
         self.vars[node] = var
         label = self.getNewLabel()
-        self.addCode( ThreeAdrCode.Assign(label, [var, '=', node.name ]) )
+        self.addCode( ThreeAdrCode.Assign(label, [var, '=', Var(node.name) ]) )
 
     def check_CharExpr(self, node):
         Utils.ASTVisitor.check(self, node)
-        var = self.getNewReg()
+        var = Var(self.getNewReg())
         self.vars[node] = var
         label = self.getNewLabel()
-        self.addCode( ThreeAdrCode.Assign(label, [var, '=', '"' + node.name + '"']) )
+        self.addCode( ThreeAdrCode.Assign(label, [var, '=', Char(node.name) ]) )
 
     def check_StringExpr(self, node):
         Utils.ASTVisitor.check(self, node)
-        var = self.getNewReg()
+        var = Var(self.getNewReg())
         self.vars[node] = var
         label = self.getNewLabel()
-        self.addCode( ThreeAdrCode.Assign(label, [var, '=', '"' + node.name + '"']) )
+        self.addCode( ThreeAdrCode.Assign(label, [var, '=', String(node.name)]) )
 
     def check_VarExpr(self, node):
         Utils.ASTVisitor.check(self, node)
-        self.vars[node] = node.name
+        self.vars[node] = Var(node.name)
 
     def check_ArrExpr(self, node):
         Utils.ASTVisitor.check(self, node)
         indexExpr = self.vars[ node.getExpr() ]
-        self.vars[node] = [node.name, '[', indexExpr, ']']
+        self.vars[node] = Arr(node.name, indexExpr)
     
     def check_CallExpr(self, node):
         Utils.ASTVisitor.check(self, node)
@@ -148,24 +223,26 @@ class CodeGenerator(Utils.ASTVisitor):
         var = self.getNewReg()
         self.vars[ node ] = var
         label = self.getNewLabel()
-        self.addCode( ThreeAdrCode.Assign(label, [var, '=', 'call', node.name]) )
+        self.addCode( ThreeAdrCode.Call(label, node.name) )
+        lalbel = self.getNewLabel()
+        self.addCode( ThreeAdrCode.Assign(label, [Var(var), '=', FuncReg()]) )
            
     def check_BinaryExpr(self, node):
         Utils.ASTVisitor.check(self, node)
         var1 = self.vars[ node.getLeftExpr() ]
         var2 = self.vars[ node.getRightExpr() ]
         label = self.getNewLabel()
-        var3 = self.getNewReg()
+        var3 = Var( self.getNewReg() )
         self.vars[ node ] = var3
-        self.addCode( ThreeAdrCode.Assign(label, self.flatten([var3, '=', var1, node.getOperator(), var2]) ) )
+        self.addCode( ThreeAdrCode.Assign(label, self.flatten([var3, '=', var1, Operator(node.getOperator()), var2]) ) )
 
     def check_UnaryExpr(self, node):
         Utils.ASTVisitor.check(self, node)
         label = self.getNewLabel()
-        var1 = self.getNewReg()
+        var1 = Var(self.getNewReg())
         var2 = self.vars[ node.getExpr() ]
         self.vars[ node ] = var1
-        self.addCode( ThreeAdrCode.Assign(label, self.flatten([var1, '=', node.getOperator(), var2]) ) )
+        self.addCode( ThreeAdrCode.Assign(label, self.flatten([var1, '=', Operator(node.getOperator()), var2]) ) )
 
     def check_AssignStatement(self, node):
         Utils.ASTVisitor.check(self, node)
@@ -191,14 +268,14 @@ class CodeGenerator(Utils.ASTVisitor):
         label = self.getNewLabel()
         var = self.vars[ node.getExpr() ]
         self.vars[ node ] = var
-        self.addCode( ThreeAdrCode.Assign(label, self.flatten([var, '=', var, '+', '1']) ))
+        self.addCode( ThreeAdrCode.Assign(label, self.flatten([var, '=', var, Operator('+'), Var('1')]) ))
  
     def check_DecrementStatement(self, node):
         Utils.ASTVisitor.check(self, node)
         label = self.getNewLabel()
         var = self.vars[ node.getExpr() ]
         self.vars[ node ] = var
-        self.addCode( ThreeAdrCode.Assign(label, self.flatten([var, '=', var, '-', '1']) ))
+        self.addCode( ThreeAdrCode.Assign(label, self.flatten([var, '=', var, Operator('-'), Var('1')]) ))
         
     def check_ReturnStatement(self, node):
         Utils.ASTVisitor.check(self, node)
@@ -273,10 +350,12 @@ class CodeGenerator(Utils.ASTVisitor):
         
     def combineCode(self):
         if len(self.globalCode) > 0:
+            pass
             self.code.append( ThreeAdrCode.Void('.global', '', []) )
         for line in self.globalCode:
             self.code.append(line)            
 
         self.code.append( ThreeAdrCode.Void('.stack', '', []) )
+        self.code.append( ThreeAdrCode.Goto('', 'hatta') ) 
         for line in self.stackCode:
             self.code.append(line)
