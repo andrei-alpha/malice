@@ -8,6 +8,9 @@ class Type(object):
     def getType(self):
         return self.type
 
+    def isVar(self):
+        return False
+
 class Var(Type):
     def __init__(self, name, ref = False):
         super(Var, self).__init__('var')
@@ -18,10 +21,10 @@ class Var(Type):
         return ('&' if self.ref == True else "") + self.name
 
     def isInt(self):
-        return self.isdigit()        
+        return self.name.isdigit()        
 
     def isVar(self):
-        return not self.isdigit()
+        return not self.name.isdigit()
 
 class Arr(Type):
     def __init__(self, name, index):
@@ -220,12 +223,12 @@ class CodeGenerator(Utils.ASTVisitor):
     def check_CallExpr(self, node):
         Utils.ASTVisitor.check(self, node)
         self.pushCallParams(node.getFunParams() )
-        var = self.getNewReg()
+        var = Var(self.getNewReg())
         self.vars[ node ] = var
         label = self.getNewLabel()
         self.addCode( ThreeAdrCode.Call(label, node.name) )
         lalbel = self.getNewLabel()
-        self.addCode( ThreeAdrCode.Assign(label, [Var(var), '=', FuncReg()]) )
+        self.addCode( ThreeAdrCode.Assign(label, [var, '=', FuncReg()]) )
            
     def check_BinaryExpr(self, node):
         Utils.ASTVisitor.check(self, node)

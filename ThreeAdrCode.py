@@ -35,9 +35,6 @@ class Push(CodeNode):
     def __init__(self, label, children):
         super(Push, self).__init__('push', label, children, True)
 
-    def getVar():
-        return self.children[0]
-
 class Pop(CodeNode):
     def __init__(self, label, children):
         super(Pop, self).__init__('pop', label, children, True)
