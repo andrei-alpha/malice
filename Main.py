@@ -1,5 +1,5 @@
 import sys, optparse, os, resource
-import Parser, Lexer, SymbolTable, CodeGenerator, TypeChecker, Utils
+import Parser, Lexer, SymbolTable, CodeGenerator, Optimiser, TypeChecker, Utils, ThreeAdrCode
 
 cmdline = optparse.OptionParser(add_help_option=False)
 (opts, args) = cmdline.parse_args(sys.argv[1:])
@@ -46,7 +46,20 @@ def runBackend(ast, stable, fileNameStem):
     # Do code generation
     codeGenerator = CodeGenerator.CodeGenerator()
     codeGenerator.visit(ast)
+    code = codeGenerator.getCode()
     codeGenerator.printCode()
+
+    #for test in code:
+    #    if isinstance(test, ThreeAdrCode.Assign):
+    #        print test.Second(), test.Second().type 
+
+    optimiser = Optimiser.Optimiser(code)
+    optimiser.DataFlowGraph()
+    optimiser.LivenessAnalysis()
+    optimiser.GraphColoring()
+
+    #optimiser.printCode()
+
 
 def run (fileName):
     print 'Analysing file ', fileName

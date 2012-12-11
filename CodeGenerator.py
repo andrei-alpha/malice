@@ -70,6 +70,7 @@ class Operator(Type):
 class FuncReg(Type):  
     def __init__(self):
         super(FuncReg, self).__init__('funcreg')
+        self.name = "#eax"
     
     def __str__(self):
         return "#eax"
@@ -311,9 +312,10 @@ class CodeGenerator(Utils.ASTVisitor):
             else:
                 if not firstCond:
                     self.addCode( ThreeAdrCode.Void('', nextLabel, []) )
-                firstCont = False
+                firstCond = False
+                self.visit(stmt)
 
-                label = nextLabel
+                label = self.getNewLabel()
                 nextLabel = self.getNewLabel()
                 jumpLabel = None
                 if node.isLastCond(stmt):
@@ -324,7 +326,6 @@ class CodeGenerator(Utils.ASTVisitor):
                 else:
                     jumpLabel = nextLabel
                 
-                self.visit(stmt)
                 var = self.vars[stmt]
                 self.addCode( ThreeAdrCode.IfFalse(label, self.flatten([var, 'goto', jumpLabel]) ) )
 
@@ -337,9 +338,11 @@ class CodeGenerator(Utils.ASTVisitor):
         condition = node.getExpr() 
         body = node.getCompoundStatement()
 
+        self.addCode( ThreeAdrCode.Void('', start, []) )
         self.visit(condition)
         var = self.vars[ condition ]
-        self.addCode( ThreeAdrCode.IfFalse(start, self.flatten([var, 'goto', end]) ))       
+        label = self.getNewLabel()
+        self.addCode( ThreeAdrCode.IfFalse(label, self.flatten([var, 'goto', end]) ))       
         self.visit(body)
         label = self.getNewLabel()
         self.addCode( ThreeAdrCode.Goto(label, start) )

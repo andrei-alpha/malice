@@ -99,7 +99,7 @@ class Call(CodeNode):
 
 class IfTrue(CodeNode):
     def __init__(self, label, children):
-        super(IfTrue, self).__init__('ifTrue', label, children)
+        super(IfTrue, self).__init__('ifTrue', label, children, True)
 
     def getJump(self):
         return self.children[2]
@@ -110,7 +110,7 @@ class Decl(CodeNode):
 
 class IfFalse(CodeNode):
     def __init__(self, label, children):
-        super(IfFalse, self).__init__('ifFalse', label, children)
+        super(IfFalse, self).__init__('ifFalse', label, children, True)
 
     def getJump(self):
         return self.children[2]
