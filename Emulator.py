@@ -54,7 +54,7 @@ class Emulate():
         last = len(self.dataStack) - 1
         return self.dataStack[last][var]
 
-    def getArr(self, arr, index, value):
+    def getArr(self, arr, index):
         last = len(self.dataStack) - 1
         return self.dataStack[last][arr][index]
 
@@ -78,42 +78,39 @@ class Emulate():
         self.PC += 1
 
     def Push(self, node):
+        #print 'push', node.getVarName()
         self.stack.append(self.get(node.getVarName()))
-        #print 'push', self.get(node.getVarName())
         self.PC += 1       
 
     def Pop(self, node):
+        #print 'pop', node.getVarName()
         self.add(node.getVarName(), self.stack.pop())
-        print 'pop', self.get(node.getVarName())
         self.PC += 1
 
     def Goto(self, node):
-        #print node.children[0]
         self.PC = self.label[node.getVar()]
 
     def Return(self, node):
-        self.PC = self.programCounter.pop()  #self.stack.pop()
-        #print 'return', self.PC
-        #self.p0 = self.data[node.getVarName()]
-        result = self.get(node.getVarName())
+        self.PC = self.programCounter.pop()  
+        var = node.getVar()
+        if var.type == 'arr':
+            index = self.getValue(var.index.name)
+            result = self.getArr(var.name, index)
+        else:
+            result = self.getValue(var.name)
         self.dataStack.pop()
         self.add('#eax', result)
-        #self.data['#eax'] = self.data[node.getVarName()]
+        
 
     def End(self, node):
-        if not self.stack:
+        if not self.programCounter:
             self.run = False
         else:
-            self.stack.pop(self.PC)
+            self.PC = self.programCounter.pop()
 
     def Call(self, node):
-        #self.stack.append(self.PC + 1)
         self.programCounter.append(self.PC + 1)
-        #print 'append', self.PC + 1
-        #print 'pop', self.stack.pop()
-        #self.PC = self.code.index(node) 
         self.PC = self.label[node.children[0]]
-        #print 'call', self.PC
         lastData = self.dataStack[-1]
         data = copy.deepcopy(lastData)
         self.dataStack.append(data)
@@ -142,11 +139,11 @@ class Emulate():
                 right = self.getValue(right.name)
             temp = self.computeValBinary(left, right, operator.oper)
             if (node.getVar().getType() == 'var'):
-                self.add(var.name, temp)  #self.data[var] = temp
+                self.add(var.name, temp) 
             else:
                 index = self.getValue(var.index.name)
                 self.addArr(var.name, index, temp)
-            #print 'var', var, self.get(var)
+            #print 'var', var, '=', temp
         else:
             if node.getOperator():
                 #unary expression
@@ -181,7 +178,7 @@ class Emulate():
                 else:
                     index = self.getValue(var.index.name)
                     self.addArr(var.name, index, exp) 
-                #print 'var', var, self.get(var)
+                #print 'var', var, '=', exp
         self.PC += 1
 
     def computeValBinary(self, left, right, operator):
@@ -233,15 +230,28 @@ class Emulate():
         #if isinstance(node.children[0], str):
          #   print self.data[node.children[0]]
         #else
-        value = str( self.get(node.getVarName()) )
-        if value[0] == '"' or value[0] == "'":
-            value = value[1:-1]
+        var = node.getVar()        
+        if var.type == 'arr':
+            index = self.getValue(var.index.name)
+            value = str( self.getArr(var.name, index) )   
+        else:
+            value = str( self.get(var.name) )
+            if value[0] == '"' or value[0] == "'":
+                value = value[1:-1]
 
+        value = value.replace("\\" + "n", '\n') 
         sys.stdout.write(value)
         self.PC += 1
 
     def Read(self, node):
-        self.add(node.getVarName(), input(" "))
+        var = node.getVar()
+        value = input(" ")
+
+        if var.type == 'arr':
+            index = self.getValue(var.index.name)
+            self.addArr(var.name, index, value)
+        else:
+            self.add(node.name, value)
         print ''
         self.PC += 1
     
