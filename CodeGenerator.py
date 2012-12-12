@@ -123,8 +123,9 @@ class CodeGenerator(Utils.ASTVisitor):
             self.stackCode.append(node)
 
     def pushCallParams(self, params):
-        for node in params:
+        for node in reversed(params):
             label = self.getNewLabel()
+            var = self.vars[node]
             if isinstance(node, AST.VarExpr) and (node.decl.getType() == 'ArrDecl' or node.decl.ref == True):
                 self.addCode( ThreeAdrCode.Push(label, [self.vars[node]] ) )
             else:
@@ -138,11 +139,13 @@ class CodeGenerator(Utils.ASTVisitor):
         self.subProg += 1
         startLabel = node.name + self.getNewFuncId()
         endLabel = self.getNewLabel() 
+        endLabel2 = self.getNewLabel()
         self.labels[node.name] = startLabel
-        self.addCode( ThreeAdrCode.Goto('', endLabel) )
+        self.addCode( ThreeAdrCode.Goto('', endLabel2) )
         self.addCode( ThreeAdrCode.Func('', startLabel, []) )
         Utils.ASTVisitor.check(self, node)
         self.addCode( ThreeAdrCode.End(endLabel, []) )
+        self.addCode( ThreeAdrCode.Void('', endLabel2, []) )
         self.subProg -= 1
     
     def check_ProcDecl(self, node):
@@ -152,11 +155,13 @@ class CodeGenerator(Utils.ASTVisitor):
         else:
             startLabel = node.name + self.getNewFuncId()
         endLabel = self.getNewLabel()
+        endLabel2 = self.getNewLabel()
         self.labels[node.name] = startLabel
-        self.addCode( ThreeAdrCode.Goto('', endLabel) )
+        self.addCode( ThreeAdrCode.Goto('', endLabel2) )
         self.addCode( ThreeAdrCode.Func('', startLabel, []) )
         Utils.ASTVisitor.check(self, node)
         self.addCode( ThreeAdrCode.End(endLabel, []) )
+        self.addCode( ThreeAdrCode.Void('', endLabel2, []) )
         self.subProg -= 1
 
     def check_VarDecl(self, node):
@@ -228,7 +233,7 @@ class CodeGenerator(Utils.ASTVisitor):
         self.vars[ node ] = var
         label = self.getNewLabel()
         self.addCode( ThreeAdrCode.Call(label, node.name) )
-        lalbel = self.getNewLabel()
+        label = self.getNewLabel()
         self.addCode( ThreeAdrCode.Assign(label, [var, '=', FuncReg()]) )
            
     def check_BinaryExpr(self, node):
@@ -342,7 +347,7 @@ class CodeGenerator(Utils.ASTVisitor):
         self.visit(condition)
         var = self.vars[ condition ]
         label = self.getNewLabel()
-        self.addCode( ThreeAdrCode.IfFalse(label, self.flatten([var, 'goto', end]) ))       
+        self.addCode( ThreeAdrCode.IfTrue(label, self.flatten([var, 'goto', end]) ))       
         self.visit(body)
         label = self.getNewLabel()
         self.addCode( ThreeAdrCode.Goto(label, start) )

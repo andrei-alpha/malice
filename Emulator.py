@@ -251,7 +251,7 @@ class Emulate():
             index = self.getValue(var.index.name)
             self.addArr(var.name, index, value)
         else:
-            self.add(node.name, value)
+            self.add(var.name, value)
         print ''
         self.PC += 1
     
