@@ -127,9 +127,10 @@ class CodeGenerator(Utils.ASTVisitor):
             label = self.getNewLabel()
             var = self.vars[node]
             if isinstance(node, AST.VarExpr) and (node.decl.getType() == 'ArrDecl' or node.decl.ref == True):
-                self.addCode( ThreeAdrCode.Push(label, [self.vars[node]] ) )
+                newVar = Var(var.name, True)
+                self.addCode( ThreeAdrCode.Push(label, [newVar] ) )
             else:
-                self.addCode( ThreeAdrCode.Push(label, [self.vars[node]] ) )     
+                self.addCode( ThreeAdrCode.Push(label, [var] ) )     
 
     def check_CompilationUnit(self, node):
         Utils.ASTVisitor.check(self, node)
@@ -300,6 +301,60 @@ class CodeGenerator(Utils.ASTVisitor):
         label = self.getNewLabel()
         self.addCode( ThreeAdrCode.Call(label, jump) )
 
+    def expand(self, node, list):
+        if isinstance(node, AST.BinaryExpr) and node.isBoolean(node.getOperator()):
+            self.expand(node.getLeftExpr(), list)
+            list.append(node.getOperator())
+            self.expand(node.getRightExpr(), list)
+        else:
+            list.append(node)
+
+    def handleConditional(self, node, startLabel, endLabel):
+        stack = []
+        onot = {'!=': '==', '<': '>=', '>': '<=', '>=': '<', '<=': '>', '==': '!='}
+        
+    
+        def preCompute(node):
+            if isinstance(node, AST.BinaryExpr) and node.isBoolean(node.getOperator()):
+                preCompute(node.getLeftExpr())
+                node.firstIfChild = preCompute(node.getRightExpr()) 
+                return node.firstIfChild
+            else:
+                node.ifLabel = self.getNewLabel()
+                return node
+        
+        def getNextLabel(node, stack, operator):
+            prev = node
+            for parent in reversed(stack):
+                if parent.getOperator() == operator and parent.getLeftExpr() == prev:
+                    return parent.firstIfChild.ifLabel
+                prev = parent
+            return (endLabel if operator == '||' else startLabel)
+
+        def computeJumps(node):
+            if isinstance(node, AST.BinaryExpr) and node.isBoolean(node.getOperator()):
+                stack.append(node)
+                computeJumps( node.getLeftExpr() )
+                computeJumps( node.getRightExpr() )
+                stack.pop()
+            else:
+                operator = node.getOperator()
+                self.visit( node.getLeftExpr() )
+                self.visit( node.getRightExpr() )
+                left = self.vars[ node.getLeftExpr() ]
+                right = self.vars[ node.getRightExpr() ]
+
+                if not isinstance(node.parent, AST.BinaryExpr) or node.parent.getOperator() == '&&':
+                    label = getNextLabel(node, stack, '||')
+                    self.addCode( ThreeAdrCode.If(node.ifLabel, [left, onot[operator], right, 'goto', label]) )
+                else:
+                    label = getNextLabel(node, stack, '&&')
+                    self.addCode( ThreeAdrCode.If(node.ifLabel, [left, operator, right, 'goto', label]) )
+
+        preCompute(node)
+        computeJumps(node)
+        
+
     def check_IfStatement(self, node):
         endLabel = self.getNewLabel()
         nextLabel = self.getNewLabel()
@@ -318,7 +373,6 @@ class CodeGenerator(Utils.ASTVisitor):
                 if not firstCond:
                     self.addCode( ThreeAdrCode.Void('', nextLabel, []) )
                 firstCond = False
-                self.visit(stmt)
 
                 label = self.getNewLabel()
                 nextLabel = self.getNewLabel()
@@ -330,28 +384,28 @@ class CodeGenerator(Utils.ASTVisitor):
                         jumpLabel = endLabel
                 else:
                     jumpLabel = nextLabel
-                
-                var = self.vars[stmt]
-                self.addCode( ThreeAdrCode.IfFalse(label, self.flatten([var, 'goto', jumpLabel]) ) )
 
+                startLabel = self.getNewLabel()
+                self.handleConditional(stmt, startLabel, jumpLabel)
+                self.addCode( ThreeAdrCode.Void('', startLabel, []) )
+               
         self.addCode( ThreeAdrCode.Void('', endLabel, []) )
 
     def check_LoopStatement(self, node):
-        start = self.getNewLabel()
-        end = self.getNewLabel()
-        #to do: bad function names here
+        beginLabel = self.getNewLabel()
+        startLabel = self.getNewLabel()
+        endLabel = self.getNewLabel()
         condition = node.getExpr() 
         body = node.getCompoundStatement()
 
-        self.addCode( ThreeAdrCode.Void('', start, []) )
-        self.visit(condition)
-        var = self.vars[ condition ]
-        label = self.getNewLabel()
-        self.addCode( ThreeAdrCode.IfTrue(label, self.flatten([var, 'goto', end]) ))       
+        self.addCode( ThreeAdrCode.Void('', beginLabel, []) )
+        self.handleConditional(condition, endLabel, startLabel)
+        self.addCode( ThreeAdrCode.Void('', startLabel, []) )
+        # visit loop body
         self.visit(body)
         label = self.getNewLabel()
-        self.addCode( ThreeAdrCode.Goto(label, start) )
-        self.addCode( ThreeAdrCode.Void('', end, []) )
+        self.addCode( ThreeAdrCode.Goto(label, beginLabel) )
+        self.addCode( ThreeAdrCode.Void('', endLabel, []) )
 
     def flatten(self, param):
         res = []   

@@ -68,7 +68,14 @@ class Optimiser():
                     node.use.append(child1)
                 if not child2 == None:
                     node.use.append(child2)
-            elif node.single == True:
+            elif isinstance(node, ThreeAdrCode.If):
+                child0 = self.getVar( node.First() )
+                child1 = self.getVar( node.Second() )
+                if not child1 == None:
+                    node.use.append(child1)
+                if not child2 == None:
+                    node.use.append(child2)
+            elif node.single == True and not isinstance(node, ThreeAdrCode.Pop): 
                 var = self.getVar( node.getVar() )
                 if not var == None:
                     node.use.append(var)
@@ -79,19 +86,23 @@ class Optimiser():
             # compute node.def
             if isinstance(node, ThreeAdrCode.Assign) or isinstance(node, ThreeAdrCode.Pop):
                 var = self.getVar( node.getVar() )
-                if node.getVar().type == 'var' and not var == None:
+                if not var == None and node.getVar().type == 'var' and not node.getVar().ref:
                     node.defs.append(var)
             
             # compute node.succ and node.pred
             if isinstance(node, ThreeAdrCode.Goto):
-                newIndex = self.labels[ node.children[0]]
+                newIndex = self.labels[ node.children[0] ]
                 node.succ.append( newIndex )
                 self.code[newIndex].pred.append( index )
-            elif isinstance(node, ThreeAdrCode.IfTrue) or isinstance(node, ThreeAdrCode.IfFalse):
-                newIndex = self.labels[node.children[2]]
+            elif isinstance(node, ThreeAdrCode.If):
+                newIndex = self.labels[ node.getJump() ]
                 node.succ.append( newIndex )
                 self.code[newIndex].pred.append( index )
             elif isinstance(node, ThreeAdrCode.Return):
+                for caller in self.code[node.root].callers:
+                    node.succ.append(caller + 1)
+                    self.code[caller + 1].pred.append(index)
+            elif isinstance(node, ThreeAdrCode.End):
                 for caller in self.code[node.root].callers:
                     node.succ.append(caller + 1)
                     self.code[caller + 1].pred.append(index)
@@ -135,6 +146,13 @@ class Optimiser():
         #for node in self.code:
         #    print '[', self.code.index(node), ']', 'in', list(node.liveIn), 'out', list(node.liveOut)
 
+    def ConstantAnalysis(self):
+        for node in self.code:
+            node.defsIn = set([])
+            node.defsOut = set([])
+            node.defsKill = set([])
+            node.defsGen = set([])
+
     def GraphColoring(self):
         edges = []    
         visit = {}   
@@ -145,7 +163,7 @@ class Optimiser():
         map(lambda var: edges.append(set()), vars)
 
         for node in self.code:      
-            if len(node.defs) == 0:
+            if len(node.defs) == 0 or not node.defs[0] in vars:
                 continue
            
              # add edges
@@ -196,9 +214,11 @@ class Optimiser():
     
         def Replace(node, map):
             for child in node.children:
-                if isinstance(child, CodeGenerator.Var) and child.isVar() and child.name in map:
+                if isinstance(child, CodeGenerator.Var) and child.isVar() and child.ref == False and child.name in map:
+                    #print 'replace', child.name, map[ child.name ]
                     child.name = map[ child.name ]
                 elif isinstance(child, CodeGenerator.Arr) and child.index.isVar() and child.index.name in map:
+                    #print 'replace', child.index.name, map[ child.index.name ]
                     child.index.name = map[ child.index.name ] 
          
         for var in xrange( len(vars) ):

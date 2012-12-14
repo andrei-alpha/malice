@@ -97,23 +97,25 @@ class Call(CodeNode):
     def getJump(self):
         return self.children[0]
 
-class IfTrue(CodeNode):
-    def __init__(self, label, children):
-        super(IfTrue, self).__init__('ifTrue', label, children, True)
-
-    def getJump(self):
-        return self.children[2]
-
 class Decl(CodeNode):
     def __init__(self, label, children):
         super(Decl, self).__init__('decl', label, children)
 
-class IfFalse(CodeNode):
+class If(CodeNode):
     def __init__(self, label, children):
-        super(IfFalse, self).__init__('ifFalse', label, children, True)
+        super(If, self).__init__('if', label, children, True)
+
+    def First(self):
+        return self.children[0]
+
+    def Second(self):
+        return self.children[2]
+
+    def getOperator(self):
+        return self.children[1]
 
     def getJump(self):
-        return self.children[2]
+        return self.children[4]
 
 class Void(CodeNode):
     def __init__(self, name, label, children):
