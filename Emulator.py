@@ -20,35 +20,12 @@ class Emulate():
         self.execute()
 
     def execute(self):
-        while self.run == True:
+        while self.run:
             node = self.code[self.PC]     
 
-            if (node.name == 'decl'):
-                self.Decl(node)
-            elif (node.name == 'push'):
-                self.Push(node)
-            elif (node.name == 'pop'):
-                self.Pop(node)
-            elif (node.name == 'goto'):
-                self.Goto(node)
-            elif (node.name == 'return'):
-                self.Return(node)
-            elif (node.name == 'end'):
-                self.End(node)
-            elif (node.name == 'assign'):
-                self.Assign(node)
-            elif (node.name == 'print'):
-                self.Print(node)
-            elif (node.name == 'read'):
-                self.Read(node)
-            elif (node.name == 'call'):
-                self.Call(node)
-            elif (node.name == 'ifFalse'):
-                self.IfFalse(node)  
-            elif (node.name == 'ifTrue'):
-                self.IfTrue(node)
-            else:
-                self.PC += 1
+            methname = 'eval_%s' % node.name
+            method = getattr(self, methname, self.eval_default)
+            method(node)
 
     def get(self, var):
         last = len(self.dataStack) - 1
@@ -70,180 +47,107 @@ class Emulate():
         last = len(self.dataStack) - 1
         self.dataStack[last][arr] = [0] * size
 
-    def Decl(self, node):
+    def eval_default(self, node):
+        self.PC += 1
+
+    def eval_decl(self, node):
         var = node.getVar()
         if var.type == 'arr':
-            size = self.getValue(var.index.name)
+            size = self.toValue(var.index.name)
             self.declArr(var.name, size)
         self.PC += 1
 
-    def Push(self, node):
-        #print 'push', node.getVarName()
+    def eval_push(self, node):
         self.stack.append(self.get(node.getVarName()))
         self.PC += 1       
 
-    def Pop(self, node):
-        #print 'pop', node.getVarName()
+    def eval_pop(self, node):
         self.add(node.getVarName(), self.stack.pop())
         self.PC += 1
 
-    def Goto(self, node):
+    def eval_goto(self, node):
         self.PC = self.label[node.getVar()]
 
-    def Return(self, node):
-        self.PC = self.programCounter.pop()  
-        var = node.getVar()
-        if var.type == 'arr':
-            index = self.getValue(var.index.name)
-            result = self.getArr(var.name, index)
+    def eval_return(self, node):
+        if not self.programCounter:
+            self.run = False
+            return
         else:
-            result = self.getValue(var.name)
+            self.PC = self.programCounter.pop()  
+        result = self.getValue( node.getVar() )
         self.dataStack.pop()
         self.add('#eax', result)
         
 
-    def End(self, node):
+    def eval_end(self, node):
         if not self.programCounter:
             self.run = False
         else:
             self.PC = self.programCounter.pop()
 
-    def Call(self, node):
+    def eval_call(self, node):
         self.programCounter.append(self.PC + 1)
         self.PC = self.label[node.children[0]]
         lastData = self.dataStack[-1]
         data = copy.deepcopy(lastData)
         self.dataStack.append(data)
 
-    def getValue(self, var):
+    def toValue(self, var):
         if isinstance(var, int) or (isinstance(var, str) and var.isdigit()):
             return int(var)
         return self.get(var)
 
-    def Assign (self, node):
+    def getValue(self, var):
+        if var.type == 'arr':
+            index = self.toValue(var.index.name)
+            return self.getArr(var.name, index)
+        return self.toValue(var.name)
+
+    def setValue(self, var, temp):
+        if var.type == 'arr':
+            index = self.toValue(var.index.name)
+            self.addArr(var.name, index, temp)    
+        else:
+            self.add(var.name, temp)
+
+    def eval_assign (self, node):
         if node.Second():
             #binary expression
             var = node.getVar()
             operator = node.getOperator()
-            left = node.First()
-            if left.getType() == 'arr':
-                index = self.getValue(left.index.name)
-                left = self.getArr(left.name, index) 
-            else:
-                left = self.getValue(left.name)
-            right = node.Second()
-            if right.getType() == 'arr':
-                index = self.getValue(right.index.name)
-                right = self.getArr(right.name, index) 
-            else:
-                right = self.getValue(right.name)
-            temp = self.computeValBinary(left, right, operator.oper)
-            if (node.getVar().getType() == 'var'):
-                self.add(var.name, temp) 
-            else:
-                index = self.getValue(var.index.name)
-                self.addArr(var.name, index, temp)
-            #print 'var', var, '=', temp
+            left = self.getValue( node.First() )
+            right = self.getValue( node.Second() )
+            temp = eval( str(left) + str(operator) + str(right) )
+            self.setValue(var, temp)
+            #print '#1 assign', var, temp
         else:
             if node.getOperator():
                 #unary expression
                 var = node.getVar()
                 operator = node.getOperator()
-                exp = node.First()
-                if exp.getType == 'arr':
-                    index = self.getValue(exp.index.name)
-                    exp = self.getArr(exp.name, index)
-                else:
-                    exp = self.getValue(exp.name)
-        
-                temp = self.computeValUnary(exp, operator.oper)
-                if (node.getVar().getType() == 'var'):
-                    self.add(var.name, temp)
-                else:
-                    index = self.getValue(var.index.name)
-                    self.addArr(var.name, index, temp)
+                exp = self.getValue( node.First() )
+                temp = eval( str(operator) + str(exp) )
+                self.setValue(var, temp)
+                #print '#2 assign', var, temp
             else:
                 #var assignment
                 var = node.getVar()
                 exp = node.First()
-                if exp.getType() == 'arr':
-                    index = self.getValue(exp.index.name)
-                    exp = self.getArr(exp.name, index)
-                elif exp.getType() == 'var' or exp.getType() == 'funcreg':
-                    exp = self.getValue(exp.name)
-
-                if node.getVar().getType() == 'var':
-                    ###print 'assign', var, exp
-                    self.add(var.name, exp)
-                else:
-                    index = self.getValue(var.index.name)
-                    self.addArr(var.name, index, exp) 
-                #print 'var', var, '=', exp
+                if exp.type == 'arr' or exp.type == 'var' or exp.type == 'funcreg':
+                    exp = self.getValue(exp)
+                self.setValue(var, exp)
+                #print '#3 assign', var, exp
         self.PC += 1
 
-    def computeValBinary(self, left, right, operator):
-        #print 'ask?', left, right, operator
-
-        if (operator == '+'):
-            return left + right
-        elif (operator == '-'):
-            return left - right
-        elif (operator == '*'):
-            return left * right
-        elif (operator == '/'):
-            return left / right
-        elif (operator == '%'):
-            return left % right
-        elif (operator == '|'):
-            return left | right
-        elif (operator == '&'):
-            return left & right
-        elif (operator == '^'):
-            return left ^ right
-        elif (operator == '||'):
-            return left or right
-        elif (operator == '&&'):
-            return left and right
-        elif (operator == '=='):
-            return (left == right)
-        elif (operator == '!='):
-            return (left != right)
-        elif (operator == '<='):
-            return (left <= right)
-        elif (operator == '>='):
-            return (left >= right)
-        elif (operator == '<'):
-            return (left < right)
-        elif (operator == '>'):
-            return (left > right)
-
-    def computeValUnary(self, expr, operator):
-        if (operator == '!'):
-            return not(expr)
-        elif (operator == '~'):
-            return ~expr
-        elif (operator == '-'):
-            return -expr
-
-                
-    def Print(self, node):
-        #if isinstance(node.children[0], str):
-         #   print self.data[node.children[0]]
-        #else
-        var = node.getVar()        
-        if var.type == 'arr':
-            index = self.getValue(var.index.name)
-            value = str( self.getArr(var.name, index) )   
-        else:
-            value = str( self.get(var.name) )
-            if value[0] == '"' or value[0] == "'":
-                value = value[1:-1]
-
-        value = value.replace("\\" + "n", '\n') 
-        sys.stdout.write(value)
+    def eval_print(self, node):
+        val = str( self.getValue( node.getVar() ) )     
+        val = val.replace('"', '')
+        val = val.replace("'", '')
+        val = val.replace("\\" + "n", '\n') 
+        sys.stdout.write(val)
         self.PC += 1
 
-    def Read(self, node):
+    def eval_read(self, node):
         var = node.getVar()
         value = input(" ")
 
@@ -252,17 +156,14 @@ class Emulate():
             self.addArr(var.name, index, value)
         else:
             self.add(var.name, value)
-        print ''
         self.PC += 1
     
-    def IfTrue(self, node):
-        if self.get(node.getVarName()) == True:
+    def eval_if(self, node):
+        first = self.getValue( node.First() )
+        second = self.getValue( node.Second() )
+        
+        if eval( str(first) + str(node.getOperator()) + str(second) ) == True:
             self.PC = self.label[ node.getJump() ]
         else:
             self.PC += 1
 
-    def IfFalse(self, node):
-        if self.get(node.getVarName()) == True:
-            self.PC += 1
-        else:
-            self.PC = self.label[ node.getJump() ]

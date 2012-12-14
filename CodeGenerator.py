@@ -309,18 +309,20 @@ class CodeGenerator(Utils.ASTVisitor):
         else:
             list.append(node)
 
-    def handleConditional(self, node, startLabel, endLabel):
+    def handleConditional(self, node, startLabel, endLabel, rev = False):
         stack = []
-        onot = {'!=': '==', '<': '>=', '>': '<=', '>=': '<', '<=': '>', '==': '!='}
+        onot = {'!=': '==', '<': '>=', '>': '<=', '>=': '<', '<=': '>', '==': '!=', '||': '&&', '&&': '||'}
         
     
         def preCompute(node):
             if isinstance(node, AST.BinaryExpr) and node.isBoolean(node.getOperator()):
                 preCompute(node.getLeftExpr())
                 node.firstIfChild = preCompute(node.getRightExpr()) 
+                node.operator = (node.operator if rev == False else onot[node.operator])
                 return node.firstIfChild
             else:
                 node.ifLabel = self.getNewLabel()
+                node.operator = (node.operator if rev == False else onot[node.operator])
                 return node
         
         def getNextLabel(node, stack, operator):
@@ -399,7 +401,7 @@ class CodeGenerator(Utils.ASTVisitor):
         body = node.getCompoundStatement()
 
         self.addCode( ThreeAdrCode.Void('', beginLabel, []) )
-        self.handleConditional(condition, endLabel, startLabel)
+        self.handleConditional(condition, startLabel, endLabel, True)
         self.addCode( ThreeAdrCode.Void('', startLabel, []) )
         # visit loop body
         self.visit(body)
