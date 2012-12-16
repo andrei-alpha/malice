@@ -12,6 +12,7 @@ class Emulate():
         self.p0 = 0
 
     def emulate(self, code):
+        print '--------------- Emulator ---------------'
         self.code = code
         for node in code:
             self.label[node.label] = code.index(node)
@@ -61,28 +62,30 @@ class Emulate():
         self.stack.append(self.get(node.getVarName()))
         self.PC += 1       
 
+    def eval_param(self, node):
+        pos = node.getPos()
+        self.add(node.getVarName(), self.stack[-pos])
+        self.PC += 1
+
     def eval_pop(self, node):
-        self.add(node.getVarName(), self.stack.pop())
+        times = node.getNo()
+        self.stack = self.stack[:-times]
         self.PC += 1
 
     def eval_goto(self, node):
         self.PC = self.label[node.getVar()]
 
-    def eval_return(self, node):
-        if not self.programCounter:
-            self.run = False
-            return
-        else:
-            self.PC = self.programCounter.pop()  
+    def eval_return(self, node):  
         result = self.getValue( node.getVar() )
-        self.dataStack.pop()
-        self.add('#eax', result)
-        
+        last = len(self.dataStack) - 2
+        self.dataStack[last]['#rax'] = result
+        self.PC += 1
 
     def eval_end(self, node):
         if not self.programCounter:
             self.run = False
         else:
+            self.dataStack.pop()
             self.PC = self.programCounter.pop()
 
     def eval_call(self, node):

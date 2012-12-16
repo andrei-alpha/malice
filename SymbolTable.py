@@ -11,6 +11,7 @@ class SymbolTable(Utils.ASTVisitor):
     def __init__(self):
         Utils.ASTVisitor.__init__(self)
         self.scopeStack = []
+        self.funcStack = []
             
     def getCurrentScope(self):
         return self.scopeStack[-1]
@@ -49,7 +50,9 @@ class SymbolTable(Utils.ASTVisitor):
         newScope.addParams(node.children[0], self.errors)
         self.scopeStack.append(newScope)
         
+        self.funcStack.append(node)
         Utils.ASTVisitor.check(self, node)
+        self.funcStack.pop()
         self.root = self.getCurrentScope()
         del self.scopeStack[-1]
        
@@ -66,7 +69,9 @@ class SymbolTable(Utils.ASTVisitor):
         newScope.addParams(node.children[0], self.errors)
         self.scopeStack.append(newScope)
         
+        self.funcStack.append(node)
         Utils.ASTVisitor.check(self, node)
+        self.funcStack.pop()
         self.root = self.getCurrentScope()
         del self.scopeStack[-1]
         pass
@@ -95,6 +100,7 @@ class SymbolTable(Utils.ASTVisitor):
     def check_ReturnStatement(self, node):
         scope = self.getCurrentScope()
         scope.hasReturnStatement = True
+        node.decl = self.funcStack[-1]
         Utils.ASTVisitor.check(self, node)
 
     def check_VarDecl(self, node):

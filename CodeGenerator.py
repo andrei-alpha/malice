@@ -89,7 +89,7 @@ class CodeGenerator(Utils.ASTVisitor):
         self.vars = {}
 
     def getNewReg(self):
-        reg = "r"
+        reg = "$R"
         self.regCnt = self.regCnt + 1
         return reg + str(self.regCnt)
 
@@ -99,8 +99,7 @@ class CodeGenerator(Utils.ASTVisitor):
 
     def getNewFuncId(self):
         self.funcCnt += 1
-        return ''
-        return str(self.funcCnt)
+        return str( hex(self.funcCnt) )
 
     def printCode(self):
         print ''
@@ -137,8 +136,11 @@ class CodeGenerator(Utils.ASTVisitor):
 
     def check_FuncDecl(self, node):
         self.subProg += 1
+        self.popCnt = 0
         startLabel = node.name + self.getNewFuncId()
+        node.startLabel = startLabel
         endLabel = self.getNewLabel() 
+        node.endLabel = endLabel    
         endLabel2 = self.getNewLabel()
         self.labels[node.name] = startLabel
         self.addCode( ThreeAdrCode.Goto('', endLabel2) )
@@ -150,11 +152,14 @@ class CodeGenerator(Utils.ASTVisitor):
     
     def check_ProcDecl(self, node):
         self.subProg += 1
+        self.popCnt = 0
         if self.subProg == 1:
             startLabel = node.name
         else:
             startLabel = node.name + self.getNewFuncId()
+        node.startLabel = startLabel
         endLabel = self.getNewLabel()
+        node.endLabel = endLabel
         endLabel2 = self.getNewLabel()
         self.labels[node.name] = startLabel
         self.addCode( ThreeAdrCode.Goto('', endLabel2) )
@@ -170,13 +175,13 @@ class CodeGenerator(Utils.ASTVisitor):
 
         if isinstance(node.parent, AST.FunParams):
             #We use the var name for the moment
-            # var = self.getNewReg()
             if node.ref == True:
                 var = Var(node.name, True)
                 self.vars[ node ] = var
-                self.addCode( ThreeAdrCode.Pop('', [var] ) )
+                self.addCode( ThreeAdrCode.Param('', [var], self.popCnt) )
             else:
-                self.addCode( ThreeAdrCode.Pop('', [var]) )
+                self.addCode( ThreeAdrCode.Param('', [var], self.popCnt) )
+            self.popCnt = self.popCnt + 1
             Utils.ASTVisitor.check(self, node)
         else:
             self.addCode( ThreeAdrCode.Decl('', [var]) )  
@@ -226,7 +231,9 @@ class CodeGenerator(Utils.ASTVisitor):
         self.pushCallParams(node.getFunParams() )
         var = Var(self.getNewReg())
         self.vars[ node ] = var
-        self.addCode( ThreeAdrCode.Call('', node.name) )
+        label = node.decl.startLabel
+        self.addCode( ThreeAdrCode.Call('', label) )
+        self.addCode( ThreeAdrCode.Pop('', len(node.getFunParams()) ) )
         self.addCode( ThreeAdrCode.Assign('', [var, '=', FuncReg()]) )
            
     def check_BinaryExpr(self, node):
@@ -275,14 +282,17 @@ class CodeGenerator(Utils.ASTVisitor):
     def check_ReturnStatement(self, node):
         Utils.ASTVisitor.check(self, node)
         var = self.vars[ node.getExpr() ]
+        label = node.decl.endLabel
         self.addCode( ThreeAdrCode.Return('', [var]) )
-
+        self.addCode( ThreeAdrCode.Goto('', label) )        
+        
     def check_CallStatement(self, node):
         Utils.ASTVisitor.check(self, node)
         self.pushCallParams(node.getFunParams() )
         var = self.getNewReg()
         jump = self.labels[node.name]
         self.addCode( ThreeAdrCode.Call('', jump) )
+        self.addCode( ThreeAdrCode.Pop('', len(node.getFunParams()) ) )
 
     def handleConditional(self, node, startLabel, endLabel, rev = False):
         stack = []

@@ -98,7 +98,37 @@ class StrDecl(object):
         self.len = len(expr)
 
     def __str__(self):
-        return self.name + ' db "' + self.expr + '", ' + str(self.len) + ', 0'
+        return self.name + ' db `' + self.expr + '`, 0'
+
+class Jump(object):
+    def __init__(self, label, name = ''):
+        self.name = name
+        self.jump = label
+
+    def __str__(self):
+       return ('jmp' if self.name == '' else self.name) + ' ' + self.jump
+
+class Cmp(object):
+    def __init__(self, reg1, reg2):
+        self.reg1 = reg1
+        self.reg2 = reg2
+
+    def __str__(self):
+        return 'cmp ' + self.reg1 + ', ' + self.reg2
+
+class Pop(object):
+    def __init__(self, reg):
+        self.reg = reg
+
+    def __str__(self):
+        return 'pop ' + self.reg
+
+class Push(object):
+    def __init__(self, reg):
+        self.reg = reg
+
+    def __str__(self):
+        return 'push ' + self.reg
 
 def getArrSize(size):
     if isinstance(size, int):
@@ -106,6 +136,3 @@ def getArrSize(size):
     if isinstance(size, str) and size.isdigit():
         return int(size)
     return 100
-    
-    
-

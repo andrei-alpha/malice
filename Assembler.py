@@ -10,11 +10,13 @@ class Assembler():
         self.text = []
         self.code = code
         self.arrs = {}
+        self.strs = {}
         self.types = {}
         self.strCnt = 0
         self.arrCnt = 0 
         self.asm_comp = {'==': 'je', '!=': 'jne', '<': 'jlt', '>': 'jgt', '<=': 'jle', '>=': 'jge'}
-
+        #TO DO: remove this after dead code elimination
+        self.regs = set(['rax','rbx','rcx','rdx','r8','r9','r10','r11','r12','r13','r14','r15','r16'])
         self.text.append('main:')
         self.extern.append('global main')
         self.extern.append('extern print_int')
@@ -39,12 +41,13 @@ class Assembler():
             if isinstance(node, ThreeAdrCode.Assign) and node.First().type == 'string':
                 name = self.newStrId()
                 self.data.append( Inst.StrDecl(name, node.First().name) )
+                self.strs[node.First().name] = name
                 node.First().name = name
             if isinstance(node, ThreeAdrCode.Decl) and node.getVar().type == 'arr':
                 name = self.newArrId()
                 self.data.append( Inst.ArrDecl(name, node.getVar().index) )
                 self.arrs[node.getVar().name] = name
-                
+
         for inst in self.code:
             methname = 'gen_%s' % inst.__class__.__name__
             method = getattr(self, methname, self.gen_default)
@@ -84,32 +87,53 @@ class Assembler():
     def gen_Func(self, inst):
         self.addCode('')
         self.addCode(inst.label + ':')
+        self.addCode( Inst.Push('rbp') )
+        self.addCode( Inst.Mov('rbp', 'rsp') )
+        #TO DO: save registers here
 
     def gen_Push(self, inst):
-        reg = self.getName(inst.getVarName())
-        line = 'push ' + reg
+        #TO DO: after constant propagation
+        var = inst.getVar()
+        self.addCode( Inst.Push(var.name) )
         #self.addCode(line)
+
+    def gen_Param(self, inst):
+        var = inst.getVar()
+        pos = inst.getPos()
+        if var.ref == True:
+            pass
+            #TO DO:
+        else:
+            self.addCode('mov ' + var.name + ', [rbp+' + str(8 * pos) + ']')
 
     def gen_Pop(self, inst):
-        reg = self.getName(inst.getVarName())
-        line = 'pop ' + reg
+        cnt = inst.getNo()
+        self.addCode('add rbp, ' + str(8 * cnt) )
         #self.addCode(line)
+
+    def gen_Call(self, inst):
+        label = inst.getJump()
+        self.addCode( Inst.Jump(label, 'call') ) 
 
     def gen_Goto(self, inst):
-        label = self.getName(inst.getVar())
-        line = 'jmp ' + label
-        #self.addCode(line)
+        label = inst.getJump()
+        self.addCode( Inst.Jump(label) )
 
     def gen_Return(self, inst):
-        reg = self.getName(inst.getVarName())
-        line = 'mov ' + reg + 'eax'
-        self.addCode(line)
-        line = 'pop ' + reg
-        self.addCode(line)
-        self.addCode('ret')
+        var = inst.getVar()
+        self.addCode( Inst.Mov('rax', var.name) )
 
     def gen_End(self, inst):
+        #TO DO: unsave register here
+        self.addCode(inst.label + ':')
+        self.addCode( Inst.Pop('rbp') )
         self.addCode('ret')
+
+    def SAFE_NAME(self, var):
+        if var in self.regs:
+            return var
+        print 'Warning: unsed code detected!'
+        return 'rax' 
 
     def gen_Assign(self, inst):
         if inst.Second():
@@ -131,7 +155,8 @@ class Assembler():
             if var.type == 'arr':
                 self.putArr(var, 'rbx', result)
             else:
-                self.addCode( Inst.Mov(var.name, result) )
+                self.addCode( Inst.Mov( self.SAFE_NAME(var.name), result) )
+                self.types[var.name] = 'int'
 
         else:
             if inst.getOperator():
@@ -148,20 +173,35 @@ class Assembler():
                 if var.type == 'arr':
                     self.putArr(var, 'rax', result)
                 else:
-                    self.addCode( Inst.Mov(var.name, result) )
+                    self.addCode( Inst.Mov( self.SAFE_NAME(var.name), result) )
+                    self.types[var.name] = 'int'
                 pass
             else:
                 #var assignment
                 var = inst.getVar()
                 first = inst.First()
+                typex = 'int'
+            
+                # change name of default return reg
+                if first.name == '#rax':
+                    first.name = 'rax'
                 reg = first.name
-                if first.type == 'arr':
+
+                if first.type == 'var' and first.name in self.types:
+                    typex = self.types[first.name]
+                elif first.type == 'arr':
                     reg = 'rbx'
                     self.getArr(first, reg)
+                elif first.type == 'char':
+                    reg = hex( ord(first.name) )
+                    typex = 'char'
+                elif first.type == 'string':
+                    typex = 'string'
                 if var.type == 'arr':
                     self.putArr(var, 'rax', reg)
                 else:
-                    self.addCode( Inst.Mov(var.name, reg) )
+                    self.addCode( Inst.Mov( self.SAFE_NAME(var.name), reg) )
+                    self.types[var.name] = typex
 
     def computeBinary(self, left, right, operator):
         #result in rax
@@ -203,29 +243,41 @@ class Assembler():
         return 'rax'
 
     def gen_If(self, inst):
-        left = self.getName(inst.First())
-        op = inst.getOperator()
-        right = self.getName(inst.Second())
-        jump = inst.getJump()
-        #self.addCode('cmp ' + left + right)
-        #self.addCode(self.asm_comp[op] + ' ' + jump) 
+        left = inst.First()
+        operator = inst.getOperator()
+        right = inst.Second()
+        label = inst.getJump()
+        
+        #TO DO after constant propagation
+        self.addCode(inst.label + ':')
+        self.addCode( Inst.Cmp(left.name, right.name) )
+        self.addCode( Inst.Jump(label, self.asm_comp[operator]) ) 
 
     def gen_Print(self, inst):
         var = inst.getVar()
         if var.type == 'arr':
             self.getArr(var, 'rdi')
             self.addCode('call print_int')
+        elif var.type == 'char':
+            self.addCode( Inst.Move('rax', hex( ord(var.name) ) ) )
+            self.addCode('call print_char') 
         else:
             self.addCode( Inst.Mov('rdi', var.name) )
             if var.name in self.types and self.types[var.name] == 'string':
                 self.addCode('call print_str')
-            if var.name in self.types and self.types[var.name] == 'char':
+            elif var.name in self.types and self.types[var.name] == 'char':
                 self.addCode('call print_char')
             else:
                 self.addCode('call print_int')
 
     def gen_Read(self, inst):
-        pass
+        var = inst.getVar()
+        #TO DO for char
+        if var.type == 'char':
+            pass
+        else:
+            self.addCode('call read_int')
+            self.addCode( Inst.Mov(var.name, 'rax') )
 
     def printCode(self):
         print ''

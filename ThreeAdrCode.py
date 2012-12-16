@@ -36,12 +36,33 @@ class Push(CodeNode):
         super(Push, self).__init__('push', label, children, True)
 
 class Pop(CodeNode):
-    def __init__(self, label, children):
-        super(Pop, self).__init__('pop', label, children, True)
+    def __init__(self, label, number):
+        super(Pop, self).__init__('pop', label, [])
+        self.number = number
+
+    def __str__(self):
+        return 'pop ' + str(self.number)
+
+    def getNo(self):
+        return self.number
+
+class Param(CodeNode):
+    def __init__(self, label, children, pos = 0):
+        super(Param, self).__init__('param', label, children, True)
+        self.pos = pos
+
+    def __str__(self):
+        return 'param ' + str(self.children[0]) + ' ' + str(self.pos)
+
+    def getPos(self):
+        return self.pos
 
 class Goto(CodeNode):
     def __init__(self, label, jump):
         super(Goto, self).__init__('goto', label, [jump])
+
+    def getJump(self):
+        return self.children[0]
 
 class Return(CodeNode):
     def __init__(self, label, children):
