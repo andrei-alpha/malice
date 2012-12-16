@@ -1,3 +1,5 @@
+#import paramiko
+import os
 import AST
 
 class Debug(object):
@@ -28,6 +30,7 @@ class ASTPrint(object):
     def visit(self, node, ind = 1):
         """Visit node children"""
         print ind, node.nodeType        
+        node.printInt = ind
 
         for child in node.children:
             if isinstance(child, AST.ASTNode):       
@@ -57,4 +60,25 @@ class ASTVisitor(Debug):
             if isinstance(child, AST.ASTNode):
                 child.parent = node
                 self.visit(child)
+
+class Test(object):
+    def __init__(self):
+        #change here for somnorici
+        self.host = 'shell1.doc.ic.ac.uk'
+        self.username = 'aba111'
+        self.passwd = ''
+        pass
+
+    def SendRunCheck(self, filename):
+        os.system('scp ' + filename + ' ' + self.username + '@' + self.host + ':~/asm/.')      
+
+        client = paramiko.SSHClient()
+        client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        client.connect(self.host, username=self.username, password=self.passwd)
+        
+        stdin, stdout, stderr = client.exec_command('sh ~/asm/compile.sh')
+        stdin.close()
+
+        print '--------------- Tester ---------------'
+        print stdout.read()
 

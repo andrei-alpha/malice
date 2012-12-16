@@ -1,88 +1,106 @@
 import ThreeAdrCode, Emulator
+import ASMInst as Inst
 
 class Assembler():
 
-    def __init__(self):
+    def __init__(self, code):
         self.asm = []
+        self.extern = []
         self.data = []
-        self.asm_comp = {'==': 'je', '<': 'jlt', '>': 'jgt', '<=': 'jle', '>=': 'jge'}
-
-    def generate(self, code):
+        self.text = []
         self.code = code
-        for inst in code:
-            str_num = 1
-            arr_num = 1
-            if inst.name == 'assign':
-                if inst.First().type == 'str':
-                    self.data.append(('str' + str(str_num) + ' db ' + '"' + inst.FirstName()) + '", ' + len(inst.FirstName()) + ', 0')
-                    str_num += 1
-            elif inst.name == 'decl':
-                if inst.First().type == 'arr':
-                    self.data.append('arr' + str(arr_num) + ' dq ')
-                    arr_num += 1
-                    length = inst.FirstName().index
-                    print 'hey', self.getValue(inst.First().index).type
-                    for j in xrange (length):   #length - 1
-                        self.data.append('0, ')
-                    self.data.append('0')
-            self.execute(inst)
-        for data in self.data:
-            print data
-        for data in self.asm:
-            print data
-            
+        self.arrs = {}
+        self.types = {}
+        self.strCnt = 0
+        self.arrCnt = 0 
+        self.asm_comp = {'==': 'je', '!=': 'jne', '<': 'jlt', '>': 'jgt', '<=': 'jle', '>=': 'jge'}
+
+        self.text.append('main:')
+        self.extern.append('global main')
+        self.extern.append('extern print_int')
+        self.extern.append('extern print_str')
+        self.extern.append('extern print_char')
+        self.extern.append('extern read_int')
+        self.extern.append('extern read_char')
+
+    def newStrId(self):
+        self.strCnt += 1
+        return 'str' + str(self.strCnt)
+
+    def newArrId(self):
+        self.arrCnt += 1
+        return 'arr' + str(self.arrCnt)
+
+    def generate(self):
+        str_num = 1
+        arr_num = 1        
+
+        for node in self.code:
+            if isinstance(node, ThreeAdrCode.Assign) and node.First().type == 'string':
+                name = self.newStrId()
+                self.data.append( Inst.StrDecl(name, node.First().name) )
+                node.First().name = name
+            if isinstance(node, ThreeAdrCode.Decl) and node.getVar().type == 'arr':
+                name = self.newArrId()
+                self.data.append( Inst.ArrDecl(name, node.getVar().index) )
+                self.arrs[node.getVar().name] = name
+                
+        for inst in self.code:
+            methname = 'gen_%s' % inst.__class__.__name__
+            method = getattr(self, methname, self.gen_default)
+            method(inst)  
+    
+
     def getName(self, reg):
         return str(reg)
 
     def getValue(self, var):
         if isinstance(var, int) or (isinstance(var, str) and var.isdigit()):
-            print 'here'
             return int(var)
-
         else:
             return var
 
+    def getArr(self, arr, reg):
+        name = self.arrs[arr.name]
+        index = arr.index.name
+        self.addCode('mov ' + reg + ', ' + name)
+        self.addCode('mov ' + reg + ', [' + reg + '+8*' + index + ']') 
+
+    def putArr(self, arr, temp, reg):
+        name = self.arrs[arr.name]
+        index = arr.index.name
+        self.addCode('mov ' + temp + ', ' + name)
+        self.addCode('mov ' + '[' + reg + '+8*' + index + '], ' + temp)
+
     def addCode(self, line):
-        self.asm.append(line)
+        self.text.append(line)
 
-    def execute(self, inst):
-        if inst.name == 'push':
-            self.Push(inst)
-        elif inst.name == 'pop':
-            self.Pop(inst)
-        elif inst.name == 'goto':
-            self.Goto(inst)
-        elif inst.name == 'return':
-            self.Return(inst)
-        elif inst.name == 'end':
-            self.End(inst)
-        elif inst.name == 'assign':
-            self.Assign(inst)
-        elif inst.name == 'ifFalse':
-            sef.IfFalse(inst)
-        elif inst.name == 'ifTrue':
-            self.IfTrue(inst)
-        elif inst.name == 'Decl':
-            self.Decl(inst)
-        elif inst.name == 'Print':
-            self.Print(inst)
+    def gen_default(self, inst):
+        pass
 
-    def Push(self, inst):
+    def gen_Void(self, inst):
+        self.addCode(inst.label + ':')
+
+    def gen_Func(self, inst):
+        self.addCode('')
+        self.addCode(inst.label + ':')
+
+    def gen_Push(self, inst):
         reg = self.getName(inst.getVarName())
         line = 'push ' + reg
-        self.addCode(line)
+        #self.addCode(line)
 
-    def Pop(self, inst):
+    def gen_Pop(self, inst):
         reg = self.getName(inst.getVarName())
         line = 'pop ' + reg
-        self.addCode(line)
+        #self.addCode(line)
 
-    def Goto(self, inst):
+    def gen_Goto(self, inst):
         label = self.getName(inst.getVar())
         line = 'jmp ' + label
-        self.addCode(line)
+        #self.addCode(line)
 
-    def Return(self, inst):
+    def gen_Return(self, inst):
         reg = self.getName(inst.getVarName())
         line = 'mov ' + reg + 'eax'
         self.addCode(line)
@@ -90,108 +108,155 @@ class Assembler():
         self.addCode(line)
         self.addCode('ret')
 
-    def End(self, inst):
-        self.addCode('end')
+    def gen_End(self, inst):
+        self.addCode('ret')
 
-    def Assign(self, inst):
+    def gen_Assign(self, inst):
         if inst.Second():
             #binary expression
             var = inst.getVar()  #self.getName(inst.getVar())
             first = inst.First()
             second = inst.Second()
-            operator = inst.getOperator()      
-
+            operator = inst.getOperator().oper     
+            reg1 = first.name
+            reg2 = second.name
             if first.type == 'arr':
-                left = 'rbx'
-                self.addCode('mov [' + first.name + '+' + first.index.name + '],' + left)
-            else:
-                left = first.name
-                
+                reg1 = 'rax'
+                self.getArr(first, reg1)
             if second.type == 'arr':
-                right = 'rcx'
-                self.addCode('mov [' + second.name + '+' + second.index.name + '], ' + right)
-            else:
-                right = second.name
+                reg2 = 'rbx'
+                self.getArr(second, reg2)
 
-            self.computeBinary(left, right, operator.oper)
-
+            result = self.computeBinary(reg1, reg2, operator)
             if var.type == 'arr':
-                self.addCode('mov[' + var.name + '+' + var.index.name + '], rax')
+                self.putArr(var, 'rbx', result)
             else:
-                self.addCode('mov ' + var.name + ' rax') 
+                self.addCode( Inst.Mov(var.name, result) )
+
         else:
             if inst.getOperator():
                 #unary expression
-                var = self.getName(inst.getVar())
-                operator = inst.getOperator()
-                exp = inst.First()
-                if exp.type == 'arr':
-                   self.addCode('mov [' + exp.name + '+' + exp.index.name + '], ' + exp)
-                else:
-                    exp = exp.name
-                self.computeUnary(exp, operator.oper)
+                operator = inst.getOperator().oper
+                var = inst.getVar()
+                first = inst.First()
+                reg = first.name
+                if first.type == 'arr':
+                    reg = 'rbx'
+                    self.getArr(first, reg)
+                
+                result = self.computeUnary(reg, operator)
                 if var.type == 'arr':
-                    self.addCode('mov[' + var.name + '+' + var.index.name + '], rax')
+                    self.putArr(var, 'rax', result)
                 else:
-                    self.addCode('mov ' + var.name + ' rax')
+                    self.addCode( Inst.Mov(var.name, result) )
+                pass
             else:
                 #var assignment
                 var = inst.getVar()
-                exp = inst.First()
-                if exp.type == 'arr':
-                    self.addCode('mov[' + exp.name + '+' + exp.index.name + '], ' + exp)
-                else:
-                    exp = exp.name
+                first = inst.First()
+                reg = first.name
+                if first.type == 'arr':
+                    reg = 'rbx'
+                    self.getArr(first, reg)
                 if var.type == 'arr':
-                    self.addCode('mov[' + var.name + '+' + var.index.name + '], ' + exp)
+                    self.putArr(var, 'rax', reg)
                 else:
-                    self.addCode('mov ' + var.name + ' ' + exp)
-
+                    self.addCode( Inst.Mov(var.name, reg) )
 
     def computeBinary(self, left, right, operator):
-        if (operator == '+'):
-            self.addCode('mov rax ' + ', ' + left)
-            self.addCode('add rax' + ', ' + right)
-        elif (operator == '-'):
-            self.addCode('mov rax' + ', ' + left)
-            self.addCode('sub rax' + ', ' + right)
-        elif (operator == '*'):
-            self.addCode('mov rax ' + ', ' + left)
-            self.addCode('imul ' + right)
-        elif (operator == '/'):
-            self.addCode('mov rax ' + ', ' + left)
-            self.addCode('idiv ' + right)
-        elif (operator == '%'):
-            pass
-        elif (operator == '|' or operator == '||'):
-            self.addCode('mov rax' + ', ' + left)
-            self.addCode('or ' + var + ', ' + right)
-        elif (operator == '&' or operator == '&&'):
-            self.addCode('mov rax' + ', ' + left)
-            self.addCode('and rax' + ', ' + right)
-        elif (operator == '^'):
-            self.addCode('mov rax' + ', ' + left)
-            self.addCode('xor rax' + ', ' + right)
-                   
- 
-    def computeUnary(self, exp, operator):
-        if operator == '!':
-            self.addCode('not ' + exp)
+        #result in rax
+        if operator == '+':
+            self.addCode( Inst.Mov('rax', left) )
+            self.addCode( Inst.Add('rax', right) )
         elif operator == '-':
-            self.addCode('neg ' + exp)
-        elif operator == '~':
-            self.addCode('neg ' + exp) #TO DO
+            self.addCode( Inst.Mov('rax', left) )
+            self.addCode( Inst.Sub('rax', right) )
+        elif operator == '*':
+            self.addCode( Inst.Mov('rax', left) )
+            self.addCode( Inst.Imul('rax', right) )
+        elif operator == '/':
+            self.addCode( Inst.Idiv(left, right) )
+        elif operator == '%':
+            self.addCode( Inst.Idiv(left, right) )
+            return 'rdx'
+        elif operator == '|':
+            self.addCode( Inst.Mov('rax', left) )
+            self.addCode( Inst.Or('rax', right) )
+        elif operator == '^':
+            self.addCode( Inst.Mov('rax', left) )
+            self.addCode( Inst.Xor('rax', right) )
+        elif operator == '&':
+            self.addCode( Inst.Mov('rax', left) )
+            self.addCode( Inst.Add('rax', right) )
 
-    def If(self, inst):
+        return 'rax'
+
+    def computeUnary(self, var, operator):
+        self.addCode( Inst.Mov('rax', var) )
+        if operator == '!':
+            self.addCode( Inst.Not('rax') )
+        elif operator == '-':
+            self.addCode( Inst.Imul('rax', '-1') )
+        elif operator == '~':
+            self.addCode( Inst.Neg('rax') )
+        
+        return 'rax'
+
+    def gen_If(self, inst):
         left = self.getName(inst.First())
         op = inst.getOperator()
         right = self.getName(inst.Second())
         jump = inst.getJump()
-        self.addCode('cmp ' + left + right)
-        self.addCode(self.asm_comp[op] + ' ' + jump) 
+        #self.addCode('cmp ' + left + right)
+        #self.addCode(self.asm_comp[op] + ' ' + jump) 
 
-    def Decl(self, inst):
+    def gen_Print(self, inst):
+        var = inst.getVar()
+        if var.type == 'arr':
+            self.getArr(var, 'rdi')
+            self.addCode('call print_int')
+        else:
+            self.addCode( Inst.Mov('rdi', var.name) )
+            if var.name in self.types and self.types[var.name] == 'string':
+                self.addCode('call print_str')
+            if var.name in self.types and self.types[var.name] == 'char':
+                self.addCode('call print_char')
+            else:
+                self.addCode('call print_int')
+
+    def gen_Read(self, inst):
         pass
 
-    def Print(self, inst):
-        pass
+    def printCode(self):
+        print ''
+        print '---------------', 'Asembler', '---------------'
+
+        for line in self.extern:
+            print line
+        print ''
+        print 'segment .data'
+        print ''
+        for line in self.data:
+            print line
+        print ''
+        print 'segment .text'
+        print ''
+        for line in self.text:
+            print line
+
+    def writeToFile(self, filename):
+        stdout = open(filename, 'w')
+        
+        for line in self.extern:
+            stdout.write(str(line) + '\n')
+        stdout.write('\n')
+        stdout.write('segment .data\n')
+        stdout.write('\n')
+        for line in self.data:
+            stdout.write(str(line) + '\n')
+        stdout.write('\n')
+        stdout.write('segment .text\n')
+        stdout.write('\n')
+        for line in self.text:
+            stdout.write(str(line) + '\n')
+

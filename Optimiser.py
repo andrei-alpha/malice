@@ -196,7 +196,7 @@ class Optimiser():
                 self.doneColoring = True
                 return
 
-            for color in xrange(1, 30):
+            for color in xrange(8, 40):
                 ok = True
                 for child in edges[ nodes[ind] ]:
                     if colors[child] == color:
@@ -240,12 +240,12 @@ class Optimiser():
         res = 0
         replace = {}
         for var in xrange( len(vars) ):
-            replace[ vars[var] ] = '__$R' + str(newVars[var])
+            replace[ vars[var] ] = '__r' + str(newVars[var])
             res = max(res, newVars[var])
             #print 'replace', vars[var], '->', replace[ vars[var] ]
 
         print ''
-        print 'After graph coloring we need at max ', res, ' registers ;)'
+        print 'After graph coloring we need at max ', (res - 7), ' registers ;)'
       
         for node in self.code:
             Replace(node, replace)
@@ -260,10 +260,10 @@ class Optimiser():
         print ''
         print '---------------', 'Optimiser', '---------------'
         for line in self.code:
-            if line.label == '':
+            if isinstance(line, ThreeAdrCode.Func):
                 print ''
             print '>', self.code.index(line), line
-            if line.label == '' or line.name == 'end':
+            if line.name == 'end':
                 print ''
         print ''
 
