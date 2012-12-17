@@ -4,6 +4,7 @@ import Utils, AST, ThreeAdrCode
 class Type(object):
     def __init__(self, type):
         self.type = type
+        self.Btype = type
 
     def getType(self):
         return self.type
@@ -172,11 +173,13 @@ class CodeGenerator(Utils.ASTVisitor):
     def check_VarDecl(self, node):
         var = Var(node.name)
         self.vars[ node ] = var
+        var.Btype = node.getType()    
 
         if isinstance(node.parent, AST.FunParams):
-            #We use the var name for the moment
             if node.ref == True:
-                var = Var(node.name, True)
+                reg = self.getNewReg()
+                var = Var(reg, True)
+                var.Btype = node.getType()
                 self.vars[ node ] = var
                 self.addCode( ThreeAdrCode.Param('', [var], self.popCnt) )
             else:
@@ -196,40 +199,56 @@ class CodeGenerator(Utils.ASTVisitor):
         var = node.name
         sizeExpr = self.vars[ node.getSizeExpr() ]
         arr = Arr(var, sizeExpr)
+        arr.Btype = 'ArrDecl'
         self.vars[ node ] = arr
         self.addCode( ThreeAdrCode.Decl('', [arr]) )
 
     def check_IntExpr(self, node):
         Utils.ASTVisitor.check(self, node)
         var = Var(self.getNewReg())
+        var.Btype = 'IntType'
         self.vars[node] = var
         self.addCode( ThreeAdrCode.Assign('', [var, '=', Var(node.name) ]) )
 
     def check_CharExpr(self, node):
         Utils.ASTVisitor.check(self, node)
         var = Var(self.getNewReg())
+        var.Btype = 'CharType'
         self.vars[node] = var
         self.addCode( ThreeAdrCode.Assign('', [var, '=', Char(node.name) ]) )
 
     def check_StringExpr(self, node):
         Utils.ASTVisitor.check(self, node)
         var = Var(self.getNewReg())
+        var.Btype = 'StringType'
         self.vars[node] = var
         self.addCode( ThreeAdrCode.Assign('', [var, '=', String(node.name)]) )
 
     def check_VarExpr(self, node):
+        #print node.line, 'VarExpr', node.name, node.decl.getType()
+
         Utils.ASTVisitor.check(self, node)
-        self.vars[node] = Var(node.name)
+        newNode = Var(node.name)
+        newNode.decl = node.decl
+        newNode.Btype = node.decl.getType()
+        self.vars[node] = newNode
 
     def check_ArrExpr(self, node):
+        #print node.line, 'ArrExpr', node.name, node.decl.getType()
+
         Utils.ASTVisitor.check(self, node)
         indexExpr = self.vars[ node.getExpr() ]
-        self.vars[node] = Arr(node.name, indexExpr)
+        name = self.vars[ node.decl ].name
+        newNode = Arr(name, indexExpr)
+        newNode.decl = node.decl
+        newNode.Btype = node.decl.getType()
+        self.vars[node] = newNode
     
     def check_CallExpr(self, node):
         Utils.ASTVisitor.check(self, node)
         self.pushCallParams(node.getFunParams() )
         var = Var(self.getNewReg())
+        var.Btype = 'IntType'
         self.vars[ node ] = var
         label = node.decl.startLabel
         self.addCode( ThreeAdrCode.Call('', label) )
@@ -241,6 +260,7 @@ class CodeGenerator(Utils.ASTVisitor):
         var1 = self.vars[ node.getLeftExpr() ]
         var2 = self.vars[ node.getRightExpr() ]
         var3 = Var( self.getNewReg() )
+        var3.Btype = var2.Btype 
         self.vars[ node ] = var3
         self.addCode( ThreeAdrCode.Assign('', self.flatten([var3, '=', var1, Operator(node.getOperator()), var2]) ) )
 
@@ -248,6 +268,7 @@ class CodeGenerator(Utils.ASTVisitor):
         Utils.ASTVisitor.check(self, node)
         var1 = Var(self.getNewReg())
         var2 = self.vars[ node.getExpr() ]
+        var1.Btype = var2.Btype
         self.vars[ node ] = var1
         self.addCode( ThreeAdrCode.Assign('', self.flatten([var1, '=', Operator(node.getOperator()), var2]) ) )
 
@@ -255,41 +276,46 @@ class CodeGenerator(Utils.ASTVisitor):
         Utils.ASTVisitor.check(self, node)
         var1 = self.vars[ node.getLeftExpr() ]
         var2 = self.vars[ node.getRightExpr() ]
+        var1.Btype = var2.Btype
         self.addCode( ThreeAdrCode.Assign('', self.flatten([var1, '=', var2]) ) )
 
     def check_PrintStatement(self, node):
         Utils.ASTVisitor.check(self, node)
         var = self.vars[ node.getExpr() ]
-        self.addCode( ThreeAdrCode.Print('', var) )
+        newNode = ThreeAdrCode.Print('', var)
+        self.addCode( newNode )
 
     def check_ReadStatement(self, node):
         Utils.ASTVisitor.check(self, node)
         var = self.vars[ node.getExpr() ]
-        self.addCode( ThreeAdrCode.Read('', var) )
+        newNode = ThreeAdrCode.Read('', var)
+        self.addCode( newNode )
         
     def check_IncrementStatement(self, node):
         Utils.ASTVisitor.check(self, node)
         var = self.vars[ node.getExpr() ]
         self.vars[ node ] = var
-        self.addCode( ThreeAdrCode.Assign('', self.flatten([var, '=', var, Operator('+'), Var('1')]) ))
+        newNode = ThreeAdrCode.Assign('', self.flatten([var, '=', var, Operator('+'), Var('1')]) )
+        self.addCode( newNode )
  
     def check_DecrementStatement(self, node):
         Utils.ASTVisitor.check(self, node)
         var = self.vars[ node.getExpr() ]
         self.vars[ node ] = var
-        self.addCode( ThreeAdrCode.Assign('', self.flatten([var, '=', var, Operator('-'), Var('1')]) ))
+        newNode = ThreeAdrCode.Assign('', self.flatten([var, '=', var, Operator('-'), Var('1')]) )
+        self.addCode( newNode )
         
     def check_ReturnStatement(self, node):
         Utils.ASTVisitor.check(self, node)
         var = self.vars[ node.getExpr() ]
         label = node.decl.endLabel
-        self.addCode( ThreeAdrCode.Return('', [var]) )
+        newNode = ThreeAdrCode.Return('', [var])
+        self.addCode( newNode )
         self.addCode( ThreeAdrCode.Goto('', label) )        
         
     def check_CallStatement(self, node):
         Utils.ASTVisitor.check(self, node)
         self.pushCallParams(node.getFunParams() )
-        var = self.getNewReg()
         jump = self.labels[node.name]
         self.addCode( ThreeAdrCode.Call('', jump) )
         self.addCode( ThreeAdrCode.Pop('', len(node.getFunParams()) ) )
@@ -299,11 +325,14 @@ class CodeGenerator(Utils.ASTVisitor):
         onot = {'!=': '==', '<': '>=', '>': '<=', '>=': '<', '<=': '>', '==': '!=', '||': '&&', '&&': '||'}
         
     
-        def preCompute(node):
+        def preCompute(node, rev):
             if isinstance(node, AST.BinaryExpr) and node.isBoolean(node.getOperator()):
-                preCompute(node.getLeftExpr())
-                node.firstIfChild = preCompute(node.getRightExpr()) 
+                preCompute(node.getLeftExpr(), rev)
+                node.firstIfChild = preCompute(node.getRightExpr(), rev) 
                 node.operator = (node.operator if rev == False else onot[node.operator])
+                return node.firstIfChild
+            elif isinstance(node, AST.UnaryExpr):
+                node.firstIfChild = preCompute(node.getExpr(), not rev)
                 return node.firstIfChild
             else:
                 node.ifLabel = self.getNewLabel()
@@ -318,12 +347,14 @@ class CodeGenerator(Utils.ASTVisitor):
                 prev = parent
             return (endLabel if operator == '||' else startLabel)
 
-        def computeJumps(node):
+        def computeJumps(node, rev):
             if isinstance(node, AST.BinaryExpr) and node.isBoolean(node.getOperator()):
                 stack.append(node)
-                computeJumps( node.getLeftExpr() )
-                computeJumps( node.getRightExpr() )
+                computeJumps( node.getLeftExpr(), rev)
+                computeJumps( node.getRightExpr(), rev)
                 stack.pop()
+            elif isinstance(node, AST.UnaryExpr):
+                computeJumps( node.getExpr(), not rev)
             else:
                 operator = node.getOperator()
                 self.visit( node.getLeftExpr() )
@@ -333,13 +364,17 @@ class CodeGenerator(Utils.ASTVisitor):
 
                 if not isinstance(node.parent, AST.BinaryExpr) or node.parent.getOperator() == '&&':
                     label = getNextLabel(node, stack, '||')
-                    self.addCode( ThreeAdrCode.If(node.ifLabel, [left, onot[operator], right, 'goto', label]) )
+                    newNode = ThreeAdrCode.If(node.ifLabel, [left, onot[operator], right, 'goto', label])
+                    newNode.Btype = left.Btype
+                    self.addCode( newNode )
                 else:
                     label = getNextLabel(node, stack, '&&')
-                    self.addCode( ThreeAdrCode.If(node.ifLabel, [left, operator, right, 'goto', label]) )
+                    newNode = ThreeAdrCode.If(node.ifLabel, [left, operator, right, 'goto', label])
+                    newNode.Btype = left.Btype
+                    self.addCode( newNode )
 
-        preCompute(node)
-        computeJumps(node)
+        preCompute(node, rev)
+        computeJumps(node, rev)
         
 
     def check_IfStatement(self, node):
@@ -354,14 +389,12 @@ class CodeGenerator(Utils.ASTVisitor):
                     self.addCode( ThreeAdrCode.Void('', elseLabel, []) )    
     
                 self.visit(stmt)
-                label = self.getNewLabel()
-                self.addCode( ThreeAdrCode.Goto(label, endLabel) )
+                self.addCode( ThreeAdrCode.Goto('', endLabel) )
             else:
                 if not firstCond:
                     self.addCode( ThreeAdrCode.Void('', nextLabel, []) )
                 firstCond = False
 
-                label = self.getNewLabel()
                 nextLabel = self.getNewLabel()
                 jumpLabel = None
                 if node.isLastCond(stmt):
@@ -374,6 +407,7 @@ class CodeGenerator(Utils.ASTVisitor):
 
                 startLabel = self.getNewLabel()
                 self.handleConditional(stmt, startLabel, jumpLabel)
+                #self.addCode( ThreeAdrCode.Goto('', jumpLabel) )
                 self.addCode( ThreeAdrCode.Void('', startLabel, []) )
                
         self.addCode( ThreeAdrCode.Void('', endLabel, []) )

@@ -64,7 +64,7 @@ class Emulate():
 
     def eval_param(self, node):
         pos = node.getPos()
-        self.add(node.getVarName(), self.stack[-pos])
+        self.add(node.getVarName(), self.stack[-(pos+1)])
         self.PC += 1
 
     def eval_pop(self, node):
@@ -164,7 +164,6 @@ class Emulate():
     def eval_if(self, node):
         first = self.getValue( node.First() )
         second = self.getValue( node.Second() )
-        
         if eval( str(first) + str(node.getOperator()) + str(second) ) == True:
             self.PC = self.label[ node.getJump() ]
         else:

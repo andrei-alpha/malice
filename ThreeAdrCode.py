@@ -48,7 +48,7 @@ class Pop(CodeNode):
 
 class Param(CodeNode):
     def __init__(self, label, children, pos = 0):
-        super(Param, self).__init__('param', label, children, True)
+        super(Param, self).__init__('param', label, children)
         self.pos = pos
 
     def __str__(self):
@@ -109,7 +109,7 @@ class Print(CodeNode):
 
 class Read(CodeNode):
     def __init__(self, label, var):
-        super(Read, self).__init__('read', label, [var], True)
+        super(Read, self).__init__('read', label, [var])
 
 class Call(CodeNode):
     def __init__(self, label, name):

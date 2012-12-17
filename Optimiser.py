@@ -32,6 +32,13 @@ class Optimiser():
             return node.index.name
         return None
 
+    def getArr(self, node):
+        if node == None:
+            return None
+        if node.Btype == 'IntType':
+            return node.name
+        return None
+
     def DataFlowGraph(self):
         self.labels = {}
         self.vars = set()
@@ -68,26 +75,48 @@ class Optimiser():
                     node.use.append(child1)
                 if not child2 == None:
                     node.use.append(child2)
+
+                arr1 = self.getArr( node.First() )
+                arr2 = self.getArr( node.Second() )
+                if not arr1 == None:
+                    node.use.append(arr1)
+                if not arr2 == None:
+                    node.use.append(arr2)
             elif isinstance(node, ThreeAdrCode.If):
                 child0 = self.getVar( node.First() )
                 child1 = self.getVar( node.Second() )
+                if not child0 == None:
+                    node.use.append(child0)
                 if not child1 == None:
                     node.use.append(child1)
-                if not child2 == None:
-                    node.use.append(child2)
+                arr0 = self.getArr( node.First() )
+                arr1 = self.getArr( node.Second() )
+                if not arr0 == None:
+                    node.use.append(arr0)
+                if not arr1 == None:
+                    node.use.append(arr1)
             elif node.single == True and not isinstance(node, ThreeAdrCode.Pop): 
                 var = self.getVar( node.getVar() )
                 if not var == None:
                     node.use.append(var)
+                arr = self.getArr( node.getVar() )
+                if not arr == None:
+                    node.use.append(arr)
             elif isinstance(node, ThreeAdrCode.Decl) and node.getVar().type == 'arr':
                 node.use.append(node.getVar().index.name)
             map(lambda var: self.vars.add(var), node.use)
 
             # compute node.def
-            if isinstance(node, ThreeAdrCode.Assign) or isinstance(node, ThreeAdrCode.Pop):
+            if isinstance(node, ThreeAdrCode.Assign) or isinstance(node, ThreeAdrCode.Read):
                 var = self.getVar( node.getVar() )
-                if not var == None and node.getVar().type == 'var' and not node.getVar().ref:
+                if not var == None and node.getVar().type == 'var':
                     node.defs.append(var)
+                arr = self.getArr( node.getVar() )
+                if not arr == None:
+                    node.defs.append(arr)
+            elif isinstance(node, ThreeAdrCode.Param):
+                var = node.getVarName()
+                node.defs.append(var)
             
             # compute node.succ and node.pred
             if isinstance(node, ThreeAdrCode.Goto):
@@ -121,7 +150,9 @@ class Optimiser():
                 
         #for node in self.code:
         #    print '[', self.code.index(node), ']', 'succ', node.succ, 'pred', node.pred, 'use', node.use, 'defs', node.defs
+        #print self.vars
         
+
     def LivenessAnalysis(self):
         for node in self.code:
             node.liveIn = set([])
@@ -220,6 +251,12 @@ class Optimiser():
                 elif isinstance(child, CodeGenerator.Arr) and child.index.isVar() and child.index.name in map:
                     #print 'replace', child.index.name, map[ child.index.name ]
                     child.index.name = map[ child.index.name ] 
+    
+                #if isinstance(child, CodeGenerator.Arr):
+                #    print '#try replace', child, child.Btype, child.name in map
+                if (isinstance(child, CodeGenerator.Var) or isinstance(child, CodeGenerator.Arr)) and child.Btype == 'IntType' and child.name in map:
+                    #print '#do replace', map[ child.name ]
+                    child.name = map[ child.name ]
          
         for var in xrange( len(vars) ):
             if var in visit:

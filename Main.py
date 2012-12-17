@@ -1,5 +1,6 @@
 import sys, optparse, os, resource
-import Parser, Lexer, SymbolTable, CodeGenerator, Optimiser, TypeChecker, Utils, ThreeAdrCode
+import Parser, Lexer, SymbolTable, TypeChecker, Utils
+import CodeGenerator, Optimiser, ThreeAdrCode, Emulator, Assembler
 
 cmdline = optparse.OptionParser(add_help_option=False)
 (opts, args) = cmdline.parse_args(sys.argv[1:])
@@ -47,19 +48,33 @@ def runBackend(ast, stable, fileNameStem):
     codeGenerator = CodeGenerator.CodeGenerator()
     codeGenerator.visit(ast)
     code = codeGenerator.getCode()
-    codeGenerator.printCode()
+    #codeGenerator.printCode()
 
     #for test in code:
     #    if isinstance(test, ThreeAdrCode.Assign):
     #        print test.Second(), test.Second().type 
 
     optimiser = Optimiser.Optimiser(code)
-    optimiser.DataFlowGraph()
-    optimiser.LivenessAnalysis()
-    optimiser.GraphColoring()
+    for times in xrange(1):
+        optimiser.DataFlowGraph()
+        optimiser.LivenessAnalysis()
+        #optimiser.C
+        optimiser.GraphColoring()
+        #optimiser.printCode()
 
-    #optimiser.printCode()
+    code = optimiser.getCode()
+ 
+    emulator = Emulator.Emulate()
+    emulator.emulate(code)
 
+    assembler = Assembler.Assembler(code)
+    assembler.generate()
+    #assembler.printCode()
+    assembler.writeToFile('test.asm')
+
+    #Not working yet
+    #test = Utils.Test()
+    #result = test.SendRunCheck('test.asm')
 
 def run (fileName):
     print 'Analysing file ', fileName
