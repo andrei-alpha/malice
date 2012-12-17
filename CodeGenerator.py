@@ -276,7 +276,6 @@ class CodeGenerator(Utils.ASTVisitor):
         Utils.ASTVisitor.check(self, node)
         var1 = self.vars[ node.getLeftExpr() ]
         var2 = self.vars[ node.getRightExpr() ]
-        var1.Btype = var2.Btype
         self.addCode( ThreeAdrCode.Assign('', self.flatten([var1, '=', var2]) ) )
 
     def check_PrintStatement(self, node):

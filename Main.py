@@ -48,7 +48,7 @@ def runBackend(ast, stable, fileNameStem):
     codeGenerator = CodeGenerator.CodeGenerator()
     codeGenerator.visit(ast)
     code = codeGenerator.getCode()
-    #codeGenerator.printCode()
+    codeGenerator.printCode()
 
     #for test in code:
     #    if isinstance(test, ThreeAdrCode.Assign):
@@ -60,7 +60,7 @@ def runBackend(ast, stable, fileNameStem):
         optimiser.LivenessAnalysis()
         #optimiser.C
         optimiser.GraphColoring()
-        #optimiser.printCode()
+        optimiser.printCode()
 
     code = optimiser.getCode()
  

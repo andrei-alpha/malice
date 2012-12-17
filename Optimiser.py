@@ -76,12 +76,15 @@ class Optimiser():
                 if not child2 == None:
                     node.use.append(child2)
 
+                arr0 = self.getArr( node.getVar() )
                 arr1 = self.getArr( node.First() )
                 arr2 = self.getArr( node.Second() )
                 if not arr1 == None:
                     node.use.append(arr1)
                 if not arr2 == None:
                     node.use.append(arr2)
+                if not arr0 == None:
+                    node.use.append(arr0)
             elif isinstance(node, ThreeAdrCode.If):
                 child0 = self.getVar( node.First() )
                 child1 = self.getVar( node.Second() )
@@ -104,6 +107,11 @@ class Optimiser():
                     node.use.append(arr)
             elif isinstance(node, ThreeAdrCode.Decl) and node.getVar().type == 'arr':
                 node.use.append(node.getVar().index.name)
+            elif isinstance(node, ThreeAdrCode.Read):
+                arr = self.getArr( node.getVar() )
+                if not arr == None:
+                    node.use.append(arr)
+
             map(lambda var: self.vars.add(var), node.use)
 
             # compute node.def
@@ -111,9 +119,9 @@ class Optimiser():
                 var = self.getVar( node.getVar() )
                 if not var == None and node.getVar().type == 'var':
                     node.defs.append(var)
-                arr = self.getArr( node.getVar() )
-                if not arr == None:
-                    node.defs.append(arr)
+                #arr = self.getArr( node.getVar() )
+                #if not arr == None:
+                #    node.defs.append(arr)
             elif isinstance(node, ThreeAdrCode.Param):
                 var = node.getVarName()
                 node.defs.append(var)
@@ -128,18 +136,21 @@ class Optimiser():
                 node.succ.append( newIndex )
                 self.code[newIndex].pred.append( index )
             elif isinstance(node, ThreeAdrCode.Return):
-                for caller in self.code[node.root].callers:
-                    node.succ.append(caller + 1)
-                    self.code[caller + 1].pred.append(index)
+                pass
+                #for caller in self.code[node.root].callers:
+                #    node.succ.append(caller + 1)
+                #    self.code[caller + 1].pred.append(index)
             elif isinstance(node, ThreeAdrCode.End):
-                for caller in self.code[node.root].callers:
-                    node.succ.append(caller + 1)
-                    self.code[caller + 1].pred.append(index)
+                pass
+                #for caller in self.code[node.root].callers:
+                #    node.succ.append(caller + 1)
+                #    self.code[caller + 1].pred.append(index)
 
             if node.isFuncCall():
-                newIndex = self.labels[ node.getJump() ]
-                node.succ.append(newIndex)
-                self.code[newIndex].pred.append( index )
+                pass
+                #newIndex = self.labels[ node.getJump() ]
+                #node.succ.append(newIndex)
+                #self.code[newIndex].pred.append( index )
 
             newIndex = index + 1
             if node.isOnlyJump() or newIndex == len(self.code):
