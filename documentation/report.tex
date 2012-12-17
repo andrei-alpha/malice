@@ -1,0 +1,73 @@
+\documentclass[a4wide, 11pt]{article}
+\usepackage{a4, fullpage}
+\setlength{\parskip}{0.3cm}
+\setlength{\parindent}{0cm}
+\usepackage[T1]{fontenc}
+\usepackage{longtable}
+\setlength\LTleft\parindent
+\setlength\LTright\fill
+
+% This is the preamble section where you can include extra packages etc.
+
+\begin{document}
+
+\title{The MAlice Compiler}
+
+\author{Andrei Antonescu \and Irina Veliche}
+
+\date{\today}         % inserts today's date
+
+\maketitle            % generates the title from the data above
+
+\pagebreak
+
+\section{Introduction}
+MAlice is an English writing-like, imperative programming language, with built-in functions, for loops and conditionals and in which many well-known algorithms and functions can be translated.
+\\\\
+This report outlines the way in which we thought of writing the compiler for MAlice, with the design choices that we made and a description of the optimisations and extensions that we built for the compiler.
+
+\section{The Product}
+In building our compiler we followed the stages of the compilation process. First, we performed lexical and syntactical analysis, separating the input in tokens and then parsing it according to the rules of the MAlice language. In order to be able to do the semantic analysis of the input, we analysed the abstract syntax tree using the visitor pattern and checked for the scope of the functions and symbols. We also wrote a type checker, that traversed the AST and verified that the types match and the functions are correctly used within the language.
+\\\\
+For the third part of the project we chose to generate three-address code for each input file, as it facilitates the optimisations we wanted to make further on. We used a tree walker method in order to generate each statement from the syntax tree. To minimize the number of registers used for the computations, we wrote a weight functions for binary expressions to see which side uses more registers in order to evaluate it first. We also thought about how the conditionals should be handled, as an expression should not continue to be evaluated if the result is already known from a partial computation. So we implemented an algorithm that does that without using an extra number of registers. When evaluating an 'or' statement from a tree of conditionals, if the left side is true then we go up in the tree and jump to the next statement that needs evaluating. If it is not true, then we evaluate the right side as well and then go up in the tree to the next statement that needs evaluating. In the case of the 'and' statement, if one the left side is false we do the jump to another statement, else we evaluate the right side and then go up in the tree. In the case where the conditional is connected only by 'or' we have to check that at least one statement is true.
+\\\\
+After doing this we generated assembly code for Intel x86 for each statement taken from the three-address code. In order to simplify a bit our work, we realised that we can add some input-output functions from C as external in the assembly file and use gcc as a linker for them. 
+
+\section{Optimisations and Extension}
+Apart from the optimisations that we did in the three-address code with using as few registers as possible, there are others that we felt would be interesting and useful to be done in order to increase the performance of the MAlice compiler.
+
+\subsection{Data-flow Analysis}
+We decided that an interesting optimisation to our project would be to do a data-flow analysis in order to determine the behaviour of a program at each moment in the execution. We implemented this using the data-flow graph, where for each node we keep information about the assignment of variables before they are used, def[n], and variables that are used before being assigned to, called use[n], the successors and the  predecessors of the node. 
+\\\\
+An application of the data-flow analysis is the liveness analysis, that is used for efficient memory allocation of the registers. For example, two variables can use the same register if we know that they are not going to be used in the same time. For each node in the data-flow graph we initialise the set of liveIn and liveOut as being empty. Then for each node we save the current results and update the liveIn and liveOut sets. We get all the outputs from the successor instructions and then we use the transfer function to get the inputs, iterating the process. The transfer function is defined by:
+$f(n) = use[n] \cup (out[liveOut[n] - def[n])$ .
+This process is repeating until the convergence condition is satisfied, that is the liveIn or liveOut sets change.
+
+\subsection{Graph Colouring}
+For an efficient register allocation we can use graph colouring, where each colour represents a register and at the end we get the maximum number of registers that have to be used for a certain computation. We assign the colours so that adjacent nodes are coloured differently. The algorithm uses backtracking. We first form the graph where two variables are connected by an edge if they cannot share the same register. Then for each connected component we try to match the colours according to the above rules. This reduces significantly the number of registers needed in the assembly code and notably increases the performance.
+
+\subsection{Emulator}
+We have also built an emulator for the three-address code. We felt that this was very useful, as it helped us in writing the other optimisations, making the code easier to debug, especially when we were translating in into assembly language. It iterated through the instructions of the three-address code using a program counter, and with the help of two stacks, a general one for data and other that keeps track of only what is inside a function that is being called, it returns the result of the computation that the input file should perform.
+
+\subsection{Performance}
+For example, in the valid set of tests for Fibaonacci Recursive, computing using the emulator fibonacci of 20 for instance, takes 5.445s and when we run it in assembly, compiled in machine code, we see a running time of 0.196s, which is considerably better. We must also take into consideration that Python does not give impressive results in terms of performance, but we felt that for the purpose of the MAlice compiler it was fast enough.
+
+\section{Design Choice}
+From the start of the project we thought about splitting the functionality of the program in several different files in order to be able to better use some bits across different parts of implementation. We mainly followed the stages of the compilation process. 
+
+\subsection{Tools}
+Thus, we built a lexer and a parser for the lexical and syntactic analysis. To help us writing the grammar rules for the MAlice language, we have used some parsing tools as Python Lex-Yacc. We have made this decision because this is quite efficient and appropriate for large grammars. It uses left-right parsing and it has the features to recognise the syntactic rules from our given language by using pattern matching. This is very useful as we were able to take the rules written in the first part of the project and adapt them in order to work for the full version of the language.
+\\\\
+We also took advantage of Python's functional part, as we used some of its features in our optimisations.
+
+\subsection{Object-oriented style}
+In some places we made use of private functions, that is some functions appear inside others and we are never able to call them by themselves. For example, in the graph colouring part, we will only call 'BackColoring' or 'Replace' as part of the graph colouring function. So if a certain function depends on others that are not used elsewhere within the program, we nest them.
+\\\\
+We have applied similar functionality and style  throughout the code where possible, as we used an object-oriented style of programming in order to make our code more readable and to make it suitable for future development. 
+
+\subsection{Reflections}
+Writing a compiler was a really interesting and challenging experience. We developed a deeper understanding of the material provided during the lectures and also learnt Python, as we discovered many of its features while coding in this language. Looking back, there are many things that went well and we are pleased about, especially the optimisations that we made. This was a really exciting part, as we did a lot of research, read many papers and then actually applied algorithms such as graph colouring and liveness analysis. The code generating part was  challenging as well. Generating the three-address code and building the emulator went quite smoothly, but translating the code into assembly had some issues and we had to think very carefully of the way of the way in which we can make it work for all the cases. Also, working in a team, splitting the tasks and collaborating to make a final working compiler was a good experience for out future projects and work. 
+\\\\
+If we were to start the MAlice compiler all over again, we would allocate more time for it from the beginning and think more about how to design it before actually starting coding it. It would have also been helpful if we read some more theory about Python and architecture before. However, we think that this was a really valuable experience and we learnt a lot from it, as building a compiler is both challenging and fun.                  
+
+\end{document}

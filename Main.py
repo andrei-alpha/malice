@@ -36,11 +36,6 @@ def runFrontend(fileNameAlice, fileNameStem):
         typecheck.printErrors()
         return False, None, None
 
-    #visitor = Utils.ASTPrint()
-    #print '------------ AST ------------' 
-    #visitor.visit(ast)
-    #visitor.printEdges()
-    
     return True, ast, stable
 
 def runBackend(ast, stable, fileNameStem):
@@ -48,33 +43,32 @@ def runBackend(ast, stable, fileNameStem):
     codeGenerator = CodeGenerator.CodeGenerator()
     codeGenerator.visit(ast)
     code = codeGenerator.getCode()
-    codeGenerator.printCode()
-
-    #for test in code:
-    #    if isinstance(test, ThreeAdrCode.Assign):
-    #        print test.Second(), test.Second().type 
+    #codeGenerator.printCode()
 
     optimiser = Optimiser.Optimiser(code)
     for times in xrange(1):
         optimiser.DataFlowGraph()
         optimiser.LivenessAnalysis()
-        #optimiser.C
+        optimiser.ConstantAnalysis()
         optimiser.GraphColoring()
-        optimiser.printCode()
+        #optimiser.printCode()
 
     code = optimiser.getCode()
  
-    emulator = Emulator.Emulate()
-    emulator.emulate(code)
+    # Remove this comment if you want to test inside an emulator
+    #emulator = Emulator.Emulate()
+    #emulator.emulate(code)
 
     assembler = Assembler.Assembler(code)
     assembler.generate()
     #assembler.printCode()
-    assembler.writeToFile('test.asm')
 
-    #Not working yet
-    #test = Utils.Test()
-    #result = test.SendRunCheck('test.asm')
+    filename = os.path.basename(fileNameStem)
+    assembler.writeToFile(filename + '.asm')
+    os.system('nasm -f elf64 %s.asm' % filename)
+    os.system('gcc -c extern.c')
+    os.system('gcc -o %s extern.o %s.o' % (filename, filename) )
+    print 'Code generation successful to "%s"' % filename
 
 def run (fileName):
     print 'Analysing file ', fileName

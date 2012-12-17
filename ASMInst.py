@@ -135,4 +135,4 @@ def getArrSize(size):
         return size
     if isinstance(size, str) and size.isdigit():
         return int(size)
-    return 110
+    return 130

@@ -15,7 +15,6 @@ class Assembler():
         self.strCnt = 0
         self.arrCnt = 0 
         self.asm_comp = {'==': 'je', '!=': 'jne', '<': 'jl', '>': 'jg', '<=': 'jle', '>=': 'jge'}
-        #TO DO: remove this after dead code elimination
         self.regs = set(['rax','rbx','rcx','rdx','r8','r9','r10','r11','r12','r13','r14','r15','r16'])
         self.text.append('main:')
         self.extern.append('global main')
@@ -24,7 +23,7 @@ class Assembler():
         self.extern.append('extern print_char')
         self.extern.append('extern read_int')
         self.extern.append('extern read_char')
-        self.totalRegs = 6
+        self.totalRegs = 7
 
     def newStrId(self):
         self.strCnt += 1
@@ -114,8 +113,12 @@ class Assembler():
     def gen_Push(self, inst):
         #TO DO: after constant propagation
         var = inst.getVar()
-        self.addCode( Inst.Push(var.name) )
-        #self.addCode(line)
+        if var.Btype == 'ArrDecl':
+            self.addCode( Inst.Mov('rax', self.arrs[ var.name ]) )
+            name = 'rax'
+        else:
+            name = var.name
+        self.addCode( Inst.Push(name) )
 
     def gen_Param(self, inst):
         var = inst.getVar()
@@ -129,7 +132,6 @@ class Assembler():
     def gen_Pop(self, inst):
         cnt = inst.getNo()
         self.addCode('add rsp, ' + str(8 * cnt) )
-        #self.addCode(line)
 
     def gen_Call(self, inst):
         label = inst.getJump()
@@ -144,7 +146,6 @@ class Assembler():
         self.addCode( Inst.Mov('rax', var.name) )
 
     def gen_End(self, inst):
-        #TO DO: unsave register here
         self.addCode(inst.label + ':')
         self.loadAll()
         self.addCode( Inst.Pop('rbp') )
@@ -153,13 +154,13 @@ class Assembler():
     def SAFE_NAME(self, var):
         if var in self.regs:
             return var
-        print 'Warning: unsed code detected!'
+        #print 'Warning: unsed code detected!'
         return 'rax' 
 
     def gen_Assign(self, inst):
         if inst.Second():
             #binary expression
-            var = inst.getVar()  #self.getName(inst.getVar())
+            var = inst.getVar() 
             first = inst.First()
             second = inst.Second()
             operator = inst.getOperator().oper     
@@ -281,7 +282,7 @@ class Assembler():
             self.getArr(var, 'rdi')
             self.addCode('call print_int')
         elif var.type == 'char' or var.Btype == 'CharType':
-            self.addCode( Inst.Mov('rdi', hex( ord(var.name) ) ) )
+            self.addCode( Inst.Mov('rdi', var.name) )
             self.addCode('call print_char') 
         elif var.Btype == 'StringType':
             label = (self.strs[var.name] if var.name in self.strs else var.name)
@@ -301,7 +302,6 @@ class Assembler():
     def gen_Read(self, inst):
         var = inst.getVar()
 
-        #TO DO for char
         if var.type == 'char' or var.Btype == 'CharType':
             self.saveAll([var.name])
             self.addCode('call read_char')
@@ -351,4 +351,5 @@ class Assembler():
         stdout.write('\n')
         for line in self.text:
             stdout.write(str(line) + '\n')
+
 

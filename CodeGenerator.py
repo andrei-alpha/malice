@@ -34,7 +34,11 @@ class Arr(Type):
         self.index = index
 
     def __str__(self):
-        return self.name + "[" + self.index.name + "]"
+        if isinstance(self.index, int):
+            index = str(self.index)
+        else:
+            index = self.index.name
+        return self.name + "[" + index + "]"
 
 class Char(Type):
     def __init__(self, name):
@@ -126,7 +130,9 @@ class CodeGenerator(Utils.ASTVisitor):
         for node in reversed(params):
             var = self.vars[node]
             if isinstance(node, AST.VarExpr) and (node.decl.getType() == 'ArrDecl' or node.decl.ref == True):
-                newVar = Var(var.name, True)
+                name = self.vars[ node.decl ].name
+                newVar = Var(name, True)
+                newVar.Btype = self.vars[ node.decl ].Btype
                 self.addCode( ThreeAdrCode.Push('', [newVar] ) )
             else:
                 self.addCode( ThreeAdrCode.Push('', [var] ) )     

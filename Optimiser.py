@@ -28,7 +28,7 @@ class Optimiser():
             return None
         if isinstance(node, CodeGenerator.Var) and node.isVar():
             return node.name
-        elif isinstance(node, CodeGenerator.Arr) and node.index.isVar():
+        elif isinstance(node, CodeGenerator.Arr) and not isinstance(node.index, int) and node.index.isVar():
             return node.index.name
         return None
 
@@ -69,7 +69,7 @@ class Optimiser():
                 child0 = node.getVar()
                 child1 = self.getVar( node.First() )
                 child2 = self.getVar( node.Second() )
-                if child0.type == 'arr':
+                if child0.type == 'arr' and not isinstance(child0.index, int):
                     node.use.append(child0.index.name)
                 if not child1 == None:
                     node.use.append(child1)
@@ -106,7 +106,8 @@ class Optimiser():
                 if not arr == None:
                     node.use.append(arr)
             elif isinstance(node, ThreeAdrCode.Decl) and node.getVar().type == 'arr':
-                node.use.append(node.getVar().index.name)
+                if not isinstance(node.getVar().index, int):
+                    node.use.append(node.getVar().index.name)
             elif isinstance(node, ThreeAdrCode.Read):
                 arr = self.getArr( node.getVar() )
                 if not arr == None:
@@ -137,20 +138,10 @@ class Optimiser():
                 self.code[newIndex].pred.append( index )
             elif isinstance(node, ThreeAdrCode.Return):
                 pass
-                #for caller in self.code[node.root].callers:
-                #    node.succ.append(caller + 1)
-                #    self.code[caller + 1].pred.append(index)
             elif isinstance(node, ThreeAdrCode.End):
                 pass
-                #for caller in self.code[node.root].callers:
-                #    node.succ.append(caller + 1)
-                #    self.code[caller + 1].pred.append(index)
-
             if node.isFuncCall():
                 pass
-                #newIndex = self.labels[ node.getJump() ]
-                #node.succ.append(newIndex)
-                #self.code[newIndex].pred.append( index )
 
             newIndex = index + 1
             if node.isOnlyJump() or newIndex == len(self.code):
@@ -257,16 +248,11 @@ class Optimiser():
         def Replace(node, map):
             for child in node.children:
                 if isinstance(child, CodeGenerator.Var) and child.isVar() and child.ref == False and child.name in map:
-                    #print 'replace', child.name, map[ child.name ]
                     child.name = map[ child.name ]
-                elif isinstance(child, CodeGenerator.Arr) and child.index.isVar() and child.index.name in map:
-                    #print 'replace', child.index.name, map[ child.index.name ]
+                elif isinstance(child, CodeGenerator.Arr) and not isinstance(child.index, int) and child.index.isVar() and child.index.name in map:
                     child.index.name = map[ child.index.name ] 
     
-                #if isinstance(child, CodeGenerator.Arr):
-                #    print '#try replace', child, child.Btype, child.name in map
                 if (isinstance(child, CodeGenerator.Var) or isinstance(child, CodeGenerator.Arr)) and child.Btype == 'IntType' and child.name in map:
-                    #print '#do replace', map[ child.name ]
                     child.name = map[ child.name ]
          
         for var in xrange( len(vars) ):
@@ -292,8 +278,8 @@ class Optimiser():
             res = max(res, newVars[var])
             #print 'replace', vars[var], '->', replace[ vars[var] ]
 
-        print ''
-        print 'After graph coloring we need at max ', (res - 7), ' registers ;)'
+        #print ''
+        #print 'After graph coloring we need at max ', (res - 7), ' registers ;)'
       
         for node in self.code:
             Replace(node, replace)
