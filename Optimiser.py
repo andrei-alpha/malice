@@ -35,7 +35,7 @@ class Optimiser():
     def getArr(self, node):
         if node == None:
             return None
-        if node.Btype == 'IntType':
+        if node.Btype == 'ArrParam':
             return node.name
         return None
 
@@ -80,6 +80,7 @@ class Optimiser():
                 arr1 = self.getArr( node.First() )
                 arr2 = self.getArr( node.Second() )
                 if not arr1 == None:
+                    print 'add', arr0
                     node.use.append(arr1)
                 if not arr2 == None:
                     node.use.append(arr2)
@@ -252,7 +253,7 @@ class Optimiser():
                 elif isinstance(child, CodeGenerator.Arr) and not isinstance(child.index, int) and child.index.isVar() and child.index.name in map:
                     child.index.name = map[ child.index.name ] 
     
-                if (isinstance(child, CodeGenerator.Var) or isinstance(child, CodeGenerator.Arr)) and child.Btype == 'IntType' and child.name in map:
+                if (isinstance(child, CodeGenerator.Var) or isinstance(child, CodeGenerator.Arr)) and child.Btype == 'ArrParam' and child.name in map:
                     child.name = map[ child.name ]
          
         for var in xrange( len(vars) ):

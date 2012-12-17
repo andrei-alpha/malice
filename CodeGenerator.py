@@ -231,23 +231,29 @@ class CodeGenerator(Utils.ASTVisitor):
         self.addCode( ThreeAdrCode.Assign('', [var, '=', String(node.name)]) )
 
     def check_VarExpr(self, node):
-        #print node.line, 'VarExpr', node.name, node.decl.getType()
+        #print node.line, 'VarExpr', node.name, node.decl.ref
 
         Utils.ASTVisitor.check(self, node)
         newNode = Var(node.name)
         newNode.decl = node.decl
-        newNode.Btype = node.decl.getType()
+        if hasattr(node.decl, 'ref') and node.decl.ref == True:
+            newNode.Btype = 'ArrParam'
+        else:
+            node.decl.ref = 'IntType'
         self.vars[node] = newNode
 
     def check_ArrExpr(self, node):
-        #print node.line, 'ArrExpr', node.name, node.decl.getType()
+        #print node.line, 'ArrExpr', node.name, node.decl.ref
 
         Utils.ASTVisitor.check(self, node)
         indexExpr = self.vars[ node.getExpr() ]
         name = self.vars[ node.decl ].name
         newNode = Arr(name, indexExpr)
         newNode.decl = node.decl
-        newNode.Btype = node.decl.getType()
+        if hasattr(node.decl, 'ref') and node.decl.ref == True:
+            newNode.Btype = 'ArrParam'
+        else:
+            newNode.Btype =  'IntType'
         self.vars[node] = newNode
     
     def check_CallExpr(self, node):
