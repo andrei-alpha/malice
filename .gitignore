@@ -25,19 +25,9 @@
 *.kate-swp
 *.swp
 parsetab.py
-parsetab.pyc
 
 #ignore project specs
 *.pdf
-
-#ignore code samples
-malice_examples/*
-
-#ignore practice stuff
-practice/*
-
-#first-part
-first-part/*
 
 #outputfiles
 *.txt

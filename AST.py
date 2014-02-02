@@ -1,10 +1,3 @@
-<<<<<<< HEAD
-
-=======
-# This module contains the nodes created by the parser.
-
-# This functions sets the name for a node in the ASTNode.
->>>>>>> 1105419... MAlice milestone, added some useful comments, V power
 def setName(self, nodeType):
     if nodeType == '':
         return self.__class__.__name__
